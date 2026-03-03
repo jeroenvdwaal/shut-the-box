@@ -902,7 +902,7 @@ const diceMaterials = [
       shape,
       material: defaultMaterial,
       sleepTimeLimit: 0.6,
-      sleepSpeedLimit: 0.3
+      sleepSpeedLimit: 0.05
     });
     body.position.set(startPos.x, startPos.y, startPos.z);
     world.addBody(body);
@@ -983,12 +983,43 @@ const diceMaterials = [
     return bestDot > 0.85; // face must be within ~32° of horizontal
   }
 
+  // Rotate the die's quaternion so its nearest face points exactly straight up.
+  function snapDieFlat(die) {
+    // Find which face is currently closest to pointing up
+    let bestNormal = new CANNON.Vec3();
+    let bestDot = -Infinity;
+    const tmpN = new CANNON.Vec3();
+    for (const face of faceNormals) {
+      die.body.quaternion.vmult(face.normal, tmpN);
+      const dot = tmpN.dot(worldUp);
+      if (dot > bestDot) {
+        bestDot = dot;
+        bestNormal.set(tmpN.x, tmpN.y, tmpN.z);
+      }
+    }
+    if (bestDot > 0.999) return; // already flat
+
+    // Compute the rotation axis and angle to bring bestNormal to worldUp
+    const axis = new CANNON.Vec3();
+    bestNormal.cross(worldUp, axis);
+    const axisLen = axis.length();
+    if (axisLen > 1e-6) {
+      axis.scale(1 / axisLen, axis); // normalise
+      const angle = Math.acos(Math.max(-1, Math.min(1, bestDot)));
+      const correction = new CANNON.Quaternion();
+      correction.setFromAxisAngle(axis, angle);
+      const snapped = correction.mult(die.body.quaternion);
+      die.body.quaternion.set(snapped.x, snapped.y, snapped.z, snapped.w);
+    }
+    die.body.velocity.setZero();
+    die.body.angularVelocity.setZero();
+  }
+
   // ----- Game logic -----
   let canRoll = true;
   let diceSettled = true;   // true = not waiting for a roll; set false by rollDice()
   let settledFrames = 0;
   let targetRollValue = null;
-  let currentSelection = [];
   let validTileNumbers = new Set();
   let gameOver = false;
   let confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
@@ -1007,304 +1038,131 @@ const diceMaterials = [
     return audioCtx;
   }
 
-  // Synthesise one wooden thump: pitched sine drop (body resonance) + noise burst (surface transient)
+  // Schedule a single oscillator with optional frequency ramp and attack.
+  function scheduleOsc(ctx, { type = 'sine', freq, freqEnd = null, freqRampDur = 0, gain, decayDur, when, attack = 0 }) {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, when);
+    if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, when + freqRampDur);
+    const g = ctx.createGain();
+    if (attack > 0) {
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(gain, when + attack);
+    } else {
+      g.gain.setValueAtTime(gain, when);
+    }
+    g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(when);
+    osc.stop(when + decayDur + 0.05);
+  }
+
+  // Schedule a filtered white-noise burst with optional filter-frequency sweep and attack.
+  function scheduleNoise(ctx, { filterType, filterFreq, filterFreqEnd = null, filterFreqRampDur = 0, Q = 1, duration, gain, decayDur, when, attack = 0 }) {
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(filterFreq, when);
+    if (filterFreqEnd !== null) filter.frequency.exponentialRampToValueAtTime(filterFreqEnd, when + filterFreqRampDur);
+    filter.Q.value = Q;
+    const g = ctx.createGain();
+    if (attack > 0) {
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(gain, when + attack);
+    } else {
+      g.gain.setValueAtTime(gain, when);
+    }
+    g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
+    noise.connect(filter);
+    filter.connect(g);
+    g.connect(ctx.destination);
+    noise.start(when);
+    noise.stop(when + duration + 0.02);
+  }
+
   function playWoodThump(ctx, when, gain) {
-    // Body resonance: sine wave that drops in pitch, like wood being struck
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(260, when);
-    osc.frequency.exponentialRampToValueAtTime(85, when + 0.055);
-    const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(gain * 0.65, when);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.075);
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(when);
-    osc.stop(when + 0.08);
-
-    // Surface transient: short filtered noise burst
-    const bufSize = Math.ceil(ctx.sampleRate * 0.06);
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 500;
-    bp.Q.value = 1.1;
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(gain * 0.38, when);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.042);
-    noise.connect(bp);
-    bp.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noise.start(when);
-    noise.stop(when + 0.05);
+    scheduleOsc(ctx,   { freq: 260, freqEnd: 85,  freqRampDur: 0.055, gain: gain * 0.65, decayDur: 0.075, when });
+    scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 500,  Q: 1.1, duration: 0.06,  gain: gain * 0.38, decayDur: 0.042, when });
   }
 
-  // Short "tock" played each time a die hits a surface.
-  // gain is already scaled to impact force by the caller.
   function playDiceClack(ctx, when, gain) {
-    // Pitched transient: sine drop (harder/brighter than the wood tile thump)
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(680, when);
-    osc.frequency.exponentialRampToValueAtTime(210, when + 0.038);
-    const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(gain * 0.55, when);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.055);
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(when);
-    osc.stop(when + 0.06);
-
-    // Noise burst (surface grain)
-    const bufSize = Math.ceil(ctx.sampleRate * 0.04);
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 600;
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(gain * 0.45, when);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.028);
-    noise.connect(hp);
-    hp.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noise.start(when);
-    noise.stop(when + 0.04);
+    scheduleOsc(ctx,   { freq: 680, freqEnd: 210, freqRampDur: 0.038, gain: gain * 0.55, decayDur: 0.055, when });
+    scheduleNoise(ctx, { filterType: 'highpass',  filterFreq: 600,          duration: 0.04,  gain: gain * 0.45, decayDur: 0.028, when });
   }
 
-  // Rattle played the moment the roll starts — sounds like dice being cast from a hand.
+  function playDiceDieHit(ctx, when, gain) {
+    scheduleOsc(ctx,   { freq: 920, freqEnd: 380, freqRampDur: 0.025, gain: gain * 0.65, decayDur: 0.13,  when });
+    scheduleNoise(ctx, { filterType: 'bandpass',  filterFreq: 1400, Q: 1.8, duration: 0.022, gain: gain * 0.40, decayDur: 0.016, when });
+  }
+
   function playDiceRattle() {
     try {
       const ctx = getAudioCtx();
       const now = ctx.currentTime;
-      // 5 staggered clicks with a slight random offset each, decaying in volume
       for (let i = 0; i < 5; i++) {
-        const t = now + i * 0.052 + Math.random() * 0.018;
-        const gain = 0.22 * Math.pow(0.72, i);   // each click a bit softer
-
-        const bufSize = Math.ceil(ctx.sampleRate * 0.038);
-        const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-        const ch = buf.getChannelData(0);
-        for (let j = 0; j < bufSize; j++) ch[j] = Math.random() * 2 - 1;
-        const noise = ctx.createBufferSource();
-        noise.buffer = buf;
-        const bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass';
-        bp.frequency.value = 700 + Math.random() * 500;
-        bp.Q.value = 2.2;
-        const amp = ctx.createGain();
-        amp.gain.setValueAtTime(gain, t);
-        amp.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
-        noise.connect(bp);
-        bp.connect(amp);
-        amp.connect(ctx.destination);
-        noise.start(t);
-        noise.stop(t + 0.04);
+        const t    = now + i * 0.052 + Math.random() * 0.018;
+        const gain = 0.22 * Math.pow(0.72, i);
+        scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 700 + Math.random() * 500, Q: 2.2, duration: 0.038, gain, decayDur: 0.032, when: t });
       }
     } catch (_) { /* silent fallback */ }
   }
 
-  // Soft air-rush that plays for the duration of the dice's flight.
-  // Bandpass noise sweeping high → mid simulates the Doppler-ish rush of the throw.
-  // Two layers: a brief high whistle (initial throw) + a longer mid-frequency rush.
+  // Two swept-noise layers: brief high whistle (throw impulse) + longer mid rush (flight).
   function playDiceWhoosh() {
     try {
       const ctx = getAudioCtx();
       const now = ctx.currentTime;
-
-      // High-frequency whistle — short, represents the throw impulse
-      const whistleEnd = 0.30;
-      const wBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * whistleEnd), ctx.sampleRate);
-      const wCh = wBuf.getChannelData(0);
-      for (let i = 0; i < wCh.length; i++) wCh[i] = Math.random() * 2 - 1;
-      const whistle = ctx.createBufferSource();
-      whistle.buffer = wBuf;
-      const wBp = ctx.createBiquadFilter();
-      wBp.type = 'bandpass';
-      wBp.frequency.setValueAtTime(2200, now);
-      wBp.frequency.exponentialRampToValueAtTime(800, now + whistleEnd);
-      wBp.Q.value = 2.0;
-      const wAmp = ctx.createGain();
-      wAmp.gain.setValueAtTime(0.0001, now);
-      wAmp.gain.exponentialRampToValueAtTime(0.07, now + 0.03);   // quick attack
-      wAmp.gain.exponentialRampToValueAtTime(0.0001, now + whistleEnd);
-      whistle.connect(wBp);
-      wBp.connect(wAmp);
-      wAmp.connect(ctx.destination);
-      whistle.start(now);
-      whistle.stop(now + whistleEnd + 0.02);
-
-      // Mid-frequency rush — lasts the full flight, fades out as dice hit the felt
-      const rushEnd = 0.65;
-      const rBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * rushEnd), ctx.sampleRate);
-      const rCh = rBuf.getChannelData(0);
-      for (let i = 0; i < rCh.length; i++) rCh[i] = Math.random() * 2 - 1;
-      const rush = ctx.createBufferSource();
-      rush.buffer = rBuf;
-      const rBp = ctx.createBiquadFilter();
-      rBp.type = 'bandpass';
-      rBp.frequency.setValueAtTime(900, now);
-      rBp.frequency.exponentialRampToValueAtTime(320, now + rushEnd);
-      rBp.Q.value = 1.3;
-      const rAmp = ctx.createGain();
-      rAmp.gain.setValueAtTime(0.0001, now);
-      rAmp.gain.exponentialRampToValueAtTime(0.09, now + 0.06);   // slightly slower attack
-      rAmp.gain.exponentialRampToValueAtTime(0.0001, now + rushEnd);
-      rush.connect(rBp);
-      rBp.connect(rAmp);
-      rAmp.connect(ctx.destination);
-      rush.start(now);
-      rush.stop(now + rushEnd + 0.02);
+      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 2200, filterFreqEnd: 800, filterFreqRampDur: 0.30, Q: 2.0, duration: 0.30, gain: 0.07, decayDur: 0.30, when: now, attack: 0.03 });
+      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq:  900, filterFreqEnd: 320, filterFreqRampDur: 0.65, Q: 1.3, duration: 0.65, gain: 0.09, decayDur: 0.65, when: now, attack: 0.06 });
     } catch (_) { /* silent fallback */ }
   }
 
-  // Hard click when two dice collide with each other — brighter and more resonant
-  // than a surface hit because both objects are dense and hard.
-  function playDiceDieHit(ctx, when, gain) {
-    // Higher-pitched ring: sine at ~900 Hz decaying slowly
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(920, when);
-    osc.frequency.exponentialRampToValueAtTime(380, when + 0.025);
-    const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(gain * 0.65, when);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.13);  // longer ring
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(when);
-    osc.stop(when + 0.14);
-
-    // Sharp transient click
-    const bufSize = Math.ceil(ctx.sampleRate * 0.022);
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 1400;
-    bp.Q.value = 1.8;
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(gain * 0.40, when);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.016);
-    noise.connect(bp);
-    bp.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noise.start(when);
-    noise.stop(when + 0.025);
-  }
-
-  // Descending minor figure played when the game ends with no moves left.
-  // Triangle wave for a warmer "horn" timbre; last note bends down for the classic
-  // sad-trombone deflation.  A4 → F4 → D4 → A3↓
+  // A4 → F4 → D4 → A3↓  sad-trombone figure on game over.
   function playGameOverSound() {
     try {
-      const ctx = getAudioCtx();
-      const start = ctx.currentTime + 0.35;  // brief pause for drama
-
+      const ctx   = getAudioCtx();
+      const start = ctx.currentTime + 0.35;
       const notes = [
-        { freq: 440, delay: 0.00, dur: 0.38 },   // A4
-        { freq: 349, delay: 0.20, dur: 0.38 },   // F4
-        { freq: 294, delay: 0.40, dur: 0.38 },   // D4
-        { freq: 220, delay: 0.60, dur: 0.95 },   // A3 — long, bends right down
+        { freq: 440, delay: 0.00, dur: 0.38 },
+        { freq: 349, delay: 0.20, dur: 0.38 },
+        { freq: 294, delay: 0.40, dur: 0.38 },
+        { freq: 220, delay: 0.60, dur: 0.95 },
       ];
-
       notes.forEach(({ freq, delay, dur }, i) => {
-        const t = start + delay;
         const isLast = i === notes.length - 1;
-
-        const osc = ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, t);
-        // Every note droops a little; the last one bends significantly downward
-        osc.frequency.exponentialRampToValueAtTime(freq * (isLast ? 0.70 : 0.96), t + dur);
-
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.17, t + 0.018);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-        osc.connect(g);
-        g.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + dur + 0.05);
+        scheduleOsc(ctx, { type: 'triangle', freq, freqEnd: freq * (isLast ? 0.70 : 0.96), freqRampDur: dur, gain: 0.17, decayDur: dur, when: start + delay, attack: 0.018 });
       });
     } catch (_) { /* silent fallback */ }
   }
 
-  // Celebratory ascending bell arpeggio + sustained chord played when the player wins.
-  // Scheduled 440 ms ahead so it starts right as the last tile finishes settling.
+  // Ascending bell arpeggio C5–E5–G5–C6 + sustained chord on win.
   function playWinSound() {
     try {
-      const ctx = getAudioCtx();
-      const start = ctx.currentTime + 0.44;
-
-      // Ascending arpeggio — C5, E5, G5, C6
+      const ctx      = getAudioCtx();
+      const start    = ctx.currentTime + 0.44;
       const arpFreqs = [523, 659, 784, 1047];
       const spacing  = 0.13;
       const ringOut  = 0.60;
 
       arpFreqs.forEach((freq, i) => {
         const t = start + i * spacing;
-
-        // Sine fundamental — bell-like sharp attack, long ring
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const gFund = ctx.createGain();
-        gFund.gain.setValueAtTime(0.0001, t);
-        gFund.gain.exponentialRampToValueAtTime(0.20, t + 0.012);
-        gFund.gain.exponentialRampToValueAtTime(0.0001, t + ringOut);
-        osc.connect(gFund);
-        gFund.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + ringOut + 0.05);
-
-        // Inharmonic partial (×2.76) — gives each note a metallic shimmer
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'sine';
-        osc2.frequency.value = freq * 2.76;
-        const gShim = ctx.createGain();
-        gShim.gain.setValueAtTime(0.0001, t);
-        gShim.gain.exponentialRampToValueAtTime(0.06, t + 0.012);
-        gShim.gain.exponentialRampToValueAtTime(0.0001, t + ringOut * 0.40);
-        osc2.connect(gShim);
-        gShim.connect(ctx.destination);
-        osc2.start(t);
-        osc2.stop(t + ringOut + 0.05);
+        scheduleOsc(ctx, { freq,          gain: 0.20, decayDur: ringOut,        when: t, attack: 0.012 });
+        scheduleOsc(ctx, { freq: freq * 2.76, gain: 0.06, decayDur: ringOut * 0.40, when: t, attack: 0.012 });
       });
 
-      // Sustained C-major chord landing after the arpeggio
       const chordT     = start + arpFreqs.length * spacing + 0.06;
-      const chordGains = [0.14, 0.10, 0.07, 0.05];   // C5, E5, G5, C6
+      const chordGains = [0.14, 0.10, 0.07, 0.05];
       arpFreqs.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, chordT);
-        g.gain.exponentialRampToValueAtTime(chordGains[i], chordT + 0.025);
-        g.gain.exponentialRampToValueAtTime(0.0001, chordT + 1.5);
-        osc.connect(g);
-        g.connect(ctx.destination);
-        osc.start(chordT);
-        osc.stop(chordT + 1.6);
+        scheduleOsc(ctx, { freq, gain: chordGains[i], decayDur: 1.5, when: chordT, attack: 0.025 });
       });
     } catch (_) { /* silent fallback */ }
   }
 
-  // Called when a tile flip animation begins.
-  // Schedules two thumps aligned with the visual bounce:
-  //   1. Main slam  — when tile reaches flat (tImpact = 60% × 0.38 s ≈ 0.228 s)
-  //   2. Soft settle — when tile comes to rest (100% × 0.38 s = 0.38 s)
   function playTileFlipSound() {
     try {
       const ctx = getAudioCtx();
@@ -1423,7 +1281,6 @@ const diceMaterials = [
   }
 
   function resetSelection() {
-    currentSelection = [];
     selectedValueEl.textContent = '0';
     tiles.forEach(t => t.isSelected = false);
   }
@@ -1526,7 +1383,6 @@ const diceMaterials = [
     updateTileMaterials();
     updateOpenSumDisplay();
     hideGameOverOverlay();
-    validTileNumbers.clear();
     rollValueEl.textContent = '–';
     selectedValueEl.textContent = '0';
     setMessage('Click <strong>Roll Dice</strong> to begin.');
@@ -1745,20 +1601,11 @@ const diceMaterials = [
             const val2 = getDieValue(dice[1]);
             const total = val1 + val2;
             onRollComplete(total);
-          } else if (settledFrames > 90) {
-            // Die is stuck at an angle — nudge it free
-            dice.forEach(d => {
-              if (!isDieFlat(d)) {
-                d.body.wakeUp();
-                d.body.velocity.set((Math.random() - 0.5) * 2, 1.5, (Math.random() - 0.5) * 2);
-                d.body.angularVelocity.set(
-                  (Math.random() - 0.5) * 5,
-                  (Math.random() - 0.5) * 5,
-                  (Math.random() - 0.5) * 5
-                );
-              }
-            });
-            settledFrames = 0;
+          } else if (settledFrames > 60) {
+            // Still not flat after ~1 s — snap each stuck die to its nearest face-up orientation
+            dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
+            diceSettled = true;
+            onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
           }
         }
       } else {
