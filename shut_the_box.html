@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shut the Box 3D</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1c1f26 0%, #050608 60%, #000 100%);
+      color: #f5f5f5;
+    }
+
+    #container {
+      position: absolute;
+      inset: 0;
+    }
+
+    #confettiCanvas {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    #ui {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px 20px;
+      box-sizing: border-box;
+    }
+
+    #ui-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    #ui-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+    }
+
+    .panel {
+      pointer-events: auto;
+      background: linear-gradient(135deg, rgba(15, 18, 25, 0.96), rgba(6, 7, 11, 0.96));
+      border-radius: 14px;
+      padding: 12px 16px;
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      max-width: 320px;
+    }
+
+    .panel h2 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #a0a6b7;
+    }
+
+    .panel p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #d7d9e0;
+      line-height: 1.4;
+    }
+
+    .stat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      color: #f5f5f5;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chip-label {
+      opacity: 0.6;
+    }
+
+    .chip-value {
+      font-weight: 600;
+    }
+
+    #rollButton {
+      pointer-events: auto;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: #050608;
+      background: linear-gradient(145deg, #ffd86f, #f7b733);
+      box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.3);
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out, opacity 0.15s ease-out;
+      min-width: 150px;
+    }
+
+    #rollButton:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(255, 255, 255, 0.5);
+      filter: brightness(1.04);
+    }
+
+    #rollButton:active:not(:disabled) {
+      transform: translateY(1px) scale(0.99);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.4);
+      filter: brightness(0.98);
+    }
+
+    #rollButton:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow:
+        0 6px 16px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    @keyframes rollButtonReady {
+      0%, 100% {
+        transform: translateY(0) scale(1);
+        box-shadow:
+          0 12px 35px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.3),
+          0 0  0px 0px rgba(247, 183, 51, 0.0);
+      }
+      50% {
+        transform: translateY(-5px) scale(1.03);
+        box-shadow:
+          0 22px 48px rgba(0, 0, 0, 0.75),
+          0 0 0 1px rgba(255, 255, 255, 0.55),
+          0 0 26px 9px rgba(247, 183, 51, 0.38);
+      }
+    }
+
+    /* Animate only when the button is actionable */
+    #rollButton:not(:disabled) {
+      animation: rollButtonReady 1.8s ease-in-out infinite;
+    }
+
+    /* Freeze the animation while the pointer is over it or pressing it */
+    #rollButton:hover:not(:disabled),
+    #rollButton:active:not(:disabled) {
+      animation: none;
+    }
+
+    #message {
+      font-size: 13px;
+      color: #d7d9e0;
+      max-width: 380px;
+      pointer-events: auto;
+    }
+
+    #message strong {
+      color: #ffffff;
+    }
+
+    #gameOverOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.55s ease-out;
+      background: radial-gradient(circle at center, rgba(5, 6, 8, 0.0) 0%, rgba(3, 4, 6, 0.9) 52%, rgba(1, 2, 3, 0.98) 100%);
+    }
+
+    #gameOverOverlay.visible {
+      opacity: 1;
+    }
+
+    .game-over-content {
+      text-align: center;
+      color: #f7f2e8;
+      pointer-events: none;
+      transform: scale(0.9);
+      animation: gameOverPop 0.65s ease-out forwards;
+    }
+
+    .game-over-title {
+      font-size: 32px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .game-over-subtitle {
+      font-size: 16px;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+
+    .game-over-score {
+      font-size: 13px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.75;
+    }
+
+    #restartButton {
+      margin-top: 18px;
+      padding: 10px 26px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ffd86f, #f7b733);
+      color: #050608;
+      box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(255, 255, 255, 0.4);
+      pointer-events: auto;
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+    }
+
+    #restartButton:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 14px 38px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.45);
+      filter: brightness(1.03);
+    }
+
+    #restartButton:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(255, 255, 255, 0.35);
+      filter: brightness(0.98);
+    }
+
+    @keyframes gameOverPop {
+      0% {
+        transform: scale(0.9) translateY(16px);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.03) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+
+    a {
+      color: #f7b733;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+<div id="container"></div>
+<canvas id="confettiCanvas"></canvas>
+<div id="ui">
+  <div id="ui-top">
+    <div class="panel">
+      <h2>Shut The Box</h2>
+      <p id="message">
+        Click <strong>Roll Dice</strong>, then <strong>click tiles</strong> to match the total. Valid tiles glow softly.
+      </p>
+      <div class="stat-row">
+        <div class="chip">
+          <span class="chip-label">Roll</span>
+          <span class="chip-value" id="rollValue">–</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Selected</span>
+          <span class="chip-value" id="selectedValue">0</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">Open Sum</span>
+          <span class="chip-value" id="openSumValue">45</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="max-width:260px">
+      <h2>How to Play</h2>
+      <p>Roll the two dice. Click any glowing tiles whose numbers sum to the roll. When your selection matches the roll, they flip down.</p>
+      <p>If you can’t match the roll, the game ends. Try to shut all tiles.</p>
+    </div>
+  </div>
+
+  <div id="ui-bottom">
+    <button id="rollButton">Roll Dice</button>
+  </div>
+</div>
+
+<div id="gameOverOverlay">
+  <div class="game-over-content">
+    <div class="game-over-title" id="gameOverTitle">Game Over</div>
+    <div class="game-over-subtitle" id="gameOverSubtitle">No more moves available.</div>
+    <div class="game-over-score" id="gameOverScore"></div>
+    <button id="restartButton">Restart Game</button>
+  </div>
+</div>
+
+<script type="module">
+  import * as THREE from 'https://unpkg.com/three@0.160.0?module';
+  import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js?module';
+  import { RoundedBoxGeometry } from 'https://unpkg.com/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js?module';
+  import * as CANNON from 'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js';
+
+  // ----- DOM -----
+  const container = document.getElementById('container');
+  const rollButton = document.getElementById('rollButton');
+  const rollValueEl = document.getElementById('rollValue');
+  const selectedValueEl = document.getElementById('selectedValue');
+  const openSumValueEl = document.getElementById('openSumValue');
+  const messageEl = document.getElementById('message');
+  const confettiCanvas = document.getElementById('confettiCanvas');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const gameOverTitleEl = document.getElementById('gameOverTitle');
+  const gameOverSubtitleEl = document.getElementById('gameOverSubtitle');
+  const gameOverScoreEl = document.getElementById('gameOverScore');
+  const restartButton = document.getElementById('restartButton');
+
+  // ----- Three.js setup -----
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x07090d);
+  scene.fog = new THREE.Fog(0x050608, 20, 45);
+
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 14, 20);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 1.2, 0);
+  controls.enableDamping = true;
+  controls.enablePan = false;
+  controls.minDistance = 12;
+  controls.maxDistance = 26;
+  controls.minPolarAngle = Math.PI * 0.18;
+  controls.maxPolarAngle = Math.PI * 0.46;
+
+  // Lighting – warm, cozy wooden table feel
+  const hemiLight = new THREE.HemisphereLight(0xf5f1e2, 0x050608, 0.7);
+  scene.add(hemiLight);
+
+  const keyLight = new THREE.DirectionalLight(0xfff7e3, 0.9);
+  keyLight.position.set(8, 18, 6);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.camera.near = 5;
+  keyLight.shadow.camera.far = 40;
+  keyLight.shadow.camera.left = -16;
+  keyLight.shadow.camera.right = 16;
+  keyLight.shadow.camera.top = 16;
+  keyLight.shadow.camera.bottom = -16;
+  scene.add(keyLight);
+
+  const rimLight = new THREE.DirectionalLight(0x9ad9ff, 0.25);
+  rimLight.position.set(-10, 10, -14);
+  scene.add(rimLight);
+
+  // Subtle table "glow" under board
+  const tableGlow = new THREE.SpotLight(0x263a5f, 0.6, 40, Math.PI / 4, 1, 1.2);
+  tableGlow.position.set(0, 20, 0);
+  tableGlow.target.position.set(0, 0, 0);
+  scene.add(tableGlow);
+  scene.add(tableGlow.target);
+
+  // ----- Physics world -----
+  const world = new CANNON.World({
+    gravity: new CANNON.Vec3(0, -20, 0)
+  });
+  world.broadphase = new CANNON.SAPBroadphase(world);
+  world.allowSleep = true;
+
+  const defaultMaterial = new CANNON.Material('default');
+  const feltMaterial = new CANNON.Material('felt');
+  const borderMaterial = new CANNON.Material('border');
+  
+  // Contact materials
+  const defaultContactMaterial = new CANNON.ContactMaterial(defaultMaterial, defaultMaterial, {
+    friction: 0.0,
+    restitution: 0.18
+  });
+  
+  const feltContactMaterial = new CANNON.ContactMaterial(feltMaterial, defaultMaterial, {
+    friction: 0.6,  // Higher friction for dice on felt
+    restitution: 0.15
+  });
+  
+  const borderContactMaterial = new CANNON.ContactMaterial(borderMaterial, defaultMaterial, {
+    friction: 0.0,  // No friction for dice on borders
+    restitution: 0.25  // Slightly higher bounce
+  });
+  
+  world.addContactMaterial(defaultContactMaterial);
+  world.addContactMaterial(feltContactMaterial);
+  world.addContactMaterial(borderContactMaterial);
+  world.defaultContactMaterial = defaultContactMaterial;
+
+  // ----- Board + dice area -----
+  const boardWidth = 18;
+  const boardDepth = 12;
+  const boardThickness = 0.6;
+  const borderHeight = 1.5;
+  const borderThickness = 0.7;
+
+  // Wooden base
+  const boardGeom = new THREE.BoxGeometry(boardWidth, boardThickness, boardDepth);
+  const woodColor = new THREE.Color(0x5c3b22);
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: woodColor,
+    roughness: 0.65,
+    metalness: 0.05,
+    envMapIntensity: 0.5
+  });
+  const boardMesh = new THREE.Mesh(boardGeom, boardMat);
+  boardMesh.position.set(0, boardThickness / 2, 0);
+  boardMesh.receiveShadow = true;
+  scene.add(boardMesh);
+
+  // Felt area (slightly inset, green, very soft)
+  const feltInset = 0.5;
+  const feltGeom = new THREE.BoxGeometry(boardWidth - feltInset * 2, 0.02, boardDepth - feltInset * 2);
+  const feltMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x0c5e26),
+    roughness: 0.95,
+    metalness: 0.0,
+    emissive: new THREE.Color(0x043313),
+    emissiveIntensity: 0.2
+  });
+  const feltMesh = new THREE.Mesh(feltGeom, feltMat);
+  feltMesh.position.set(0, boardThickness + 0.01, 0);
+  feltMesh.receiveShadow = true;
+  scene.add(feltMesh);
+
+  // Wooden borders
+  const borderMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x704529),
+    roughness: 0.6,
+    metalness: 0.05
+  });
+
+  function addBorder(x, z, sx, sy, sz) {
+    const geom = new THREE.BoxGeometry(sx, sy, sz);
+    const mesh = new THREE.Mesh(geom, borderMat);
+    mesh.position.set(x, sy / 2 + boardThickness, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    return mesh;
+  }
+
+  const borderTop    = addBorder(0, -boardDepth / 2 + borderThickness / 2, boardWidth, borderHeight, borderThickness);
+  const borderBottom = addBorder(0,  boardDepth / 2 - borderThickness / 2, boardWidth, borderHeight, borderThickness);
+  const borderLeft   = addBorder(-boardWidth / 2 + borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
+  const borderRight  = addBorder( boardWidth / 2 - borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
+
+  // Physics: board + borders
+  const groundShape = new CANNON.Box(new CANNON.Vec3(boardWidth / 2, 0.1, boardDepth / 2));
+  const groundBody = new CANNON.Body({ mass: 0, material: feltMaterial });  // Use felt material for ground
+  groundBody.addShape(groundShape);
+  groundBody.position.set(0, boardThickness, 0);
+  world.addBody(groundBody);
+
+  function addBorderBody(x, y, z, sx, sy, sz) {
+    const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
+    const body = new CANNON.Body({ mass: 0, material: borderMaterial });  // Use border material for borders
+    body.addShape(shape);
+    body.position.set(x, y, z);
+    world.addBody(body);
+  }
+
+  // Physics borders are made much taller than the visible rails so a die can only
+  // ever hit the *vertical side* — never land and rest on the flat top face.
+  // Visual rail top  = boardThickness + borderHeight           = 2.1
+  // Physics wall top = boardThickness + physBorderHeight       ≈ 9.1
+  // Max die apex     ≈ 6.1  →  always below physics wall top  ✓
+  const physBorderHeight   = borderHeight + 7.5;               // 9.0 units tall
+  const physBorderCenterY  = boardThickness + physBorderHeight / 2; // 5.1
+
+  const borderInset = 0.8;
+  addBorderBody(borderTop.position.x,    physBorderCenterY, borderTop.position.z + borderInset,    boardWidth - borderInset * 2, physBorderHeight, borderThickness);
+  addBorderBody(borderBottom.position.x, physBorderCenterY, borderBottom.position.z - borderInset, boardWidth - borderInset * 2, physBorderHeight, borderThickness);
+  addBorderBody(borderLeft.position.x + borderInset,  physBorderCenterY, borderLeft.position.z,  borderThickness, physBorderHeight, boardDepth - borderInset * 2);
+  addBorderBody(borderRight.position.x - borderInset, physBorderCenterY, borderRight.position.z, borderThickness, physBorderHeight, boardDepth - borderInset * 2);
+
+  // ----- Invisible safety walls (tall enough to contain dice during a throw) -----
+  const safetyBoxHeight = 9.0;  // Tall enough for any realistic throw arc
+  const safetyBoxY = boardThickness + safetyBoxHeight / 2;  // Centered above board
+  
+  // Create invisible walls around the entire play area
+  function addSafetyWall(x, y, z, sx, sy, sz) {
+    const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
+    const body = new CANNON.Body({ 
+      mass: 0, 
+      material: borderMaterial,  // Use border material (no friction, slightly bouncy)
+      collisionFilterGroup: 1,   // Optional: set collision group
+      collisionFilterMask: 1     // Optional: set collision mask
+    });
+    body.addShape(shape);
+    body.position.set(x, y, z);
+    world.addBody(body);
+  }
+  
+  // Calculate exact positions for walls
+  // The walls should be positioned at the OUTER edge of the visible borders
+  const wallThickness = 0.2;  // Thicker walls for better collision
+  
+  // Top wall (north) - positioned at the outer edge of the top border
+  const topWallZ = -boardDepth / 2 - borderThickness / 2 - wallThickness / 2;
+  addSafetyWall(
+    0, 
+    safetyBoxY, 
+    topWallZ, 
+    boardWidth + wallThickness * 2,  // Extend width slightly
+    safetyBoxHeight, 
+    wallThickness
+  );
+  
+  // Bottom wall (south)
+  const bottomWallZ = boardDepth / 2 + borderThickness / 2 + wallThickness / 2;
+  addSafetyWall(
+    0, 
+    safetyBoxY, 
+    bottomWallZ, 
+    boardWidth + wallThickness * 2,  // Extend width slightly
+    safetyBoxHeight, 
+    wallThickness
+  );
+  
+  // Left wall (west)
+  const leftWallX = -boardWidth / 2 - borderThickness / 2 - wallThickness / 2;
+  addSafetyWall(
+    leftWallX, 
+    safetyBoxY, 
+    0, 
+    wallThickness, 
+    safetyBoxHeight, 
+    boardDepth + borderThickness + wallThickness  // Extend depth
+  );
+  
+  // Right wall (east)
+  const rightWallX = boardWidth / 2 + borderThickness / 2 + wallThickness / 2;
+  addSafetyWall(
+    rightWallX, 
+    safetyBoxY, 
+    0, 
+    wallThickness, 
+    safetyBoxHeight, 
+    boardDepth + borderThickness + wallThickness  // Extend depth
+  );
+  
+  // No ceiling — gravity naturally brings dice back down.
+  // The tall safety walls above are sufficient to contain any realistic throw.
+
+  // ----- Tiles (1–9) -----
+  const tiles = [];
+  const tileWidth = 1.4;
+  const tileHeight = 2.4;
+  const tileDepth = 0.3;
+  const tileGap = 0.2;
+  // Position tiles sitting on top of the top border
+  const tileBaseZ = borderTop.position.z;
+
+  const tileWoodColor = new THREE.Color(0x9f6f3f);
+
+  const tileMatClosed = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x3a2515),
+    roughness: 0.65,
+    metalness: 0.04
+  });
+
+  const tileGeometry = new RoundedBoxGeometry(
+    tileWidth,
+    tileHeight,
+    tileDepth,
+    4,                      // segments
+    Math.min(tileWidth, tileDepth) * 0.22 // corner radius
+  );
+
+  // Reusable text canvas texture generator
+  function createNumberTexture(num) {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Background transparent so material color shows; draw subtle vignette
+    ctx.clearRect(0, 0, size, size);
+
+    const center = size / 2;
+    const radius = size * 0.45;
+    const grad = ctx.createRadialGradient(center, center * 0.6, radius * 0.1, center, center, radius);
+    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(center, center, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Number
+    ctx.font = 'bold 150px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f7f2e8';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 16;
+    ctx.fillText(num.toString(), center, center * 1.06);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    return texture;
+  }
+
+  const numberTextures = {};
+
+  function getNumberTexture(num) {
+    if (!numberTextures[num]) {
+      numberTextures[num] = createNumberTexture(num);
+    }
+    return numberTextures[num];
+  }
+
+  const tileCanvasMatCache = {};
+
+  // Small green dot used to indicate highlight in the top-right corner
+  const tileHighlightDotGeo = new THREE.SphereGeometry(0.09, 12, 12);
+  const tileHighlightDotMat = new THREE.MeshBasicMaterial({ color: 0x2bff7a });
+
+  function createTileMaterial(num) {
+    if (!tileCanvasMatCache[num]) {
+      tileCanvasMatCache[num] = new THREE.MeshStandardMaterial({
+        color: tileWoodColor,
+        roughness: 0.5,
+        metalness: 0.1,
+        map: getNumberTexture(num),
+        emissive: new THREE.Color(0x000000),
+        emissiveIntensity: 0.0
+      });
+    }
+    return tileCanvasMatCache[num].clone();
+  }
+
+  const tileRaycastMeshes = [];
+
+  for (let i = 1; i <= 9; i++) {
+    const x = (i - 5) * (tileWidth + tileGap);
+
+    // Hinge pivot at the bottom of the tile, sitting on the top border
+    const pivot = new THREE.Object3D();
+    pivot.position.set(x, boardThickness + borderHeight + 0.01, tileBaseZ);
+    scene.add(pivot);
+
+    const mat = createTileMaterial(i);
+    const mesh = new THREE.Mesh(tileGeometry, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    // Local position so the bottom of the tile is at the pivot
+    mesh.position.set(0, tileHeight / 2, 0);
+    // Slight backward tilt
+    pivot.rotation.x = -Math.PI * 0.06;
+    pivot.add(mesh);
+
+    // Add a small green dot in the top-right front corner (local space)
+    const dot = new THREE.Mesh(tileHighlightDotGeo, tileHighlightDotMat);
+    dot.position.set(
+      tileWidth / 2 - 0.15,
+      tileHeight / 2 - 0.15,
+      tileDepth / 2 + 0.02
+    );
+    dot.visible = false;
+    mesh.add(dot);
+
+    // Store per-tile extra info
+    const tile = {
+      number: i,
+      mesh,
+      pivot,
+      highlightDot: dot,
+      state: 'open', // 'open', 'highlight', 'closed'
+      isSelected: false
+    };
+    tiles.push(tile);
+    tileRaycastMeshes.push(mesh);
+
+    // Black "hinge" at bottom
+    const hingeGeo = new THREE.BoxGeometry(tileWidth * 0.95, 0.08, tileDepth * 1.6);
+    const hingeMat = new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const hinge = new THREE.Mesh(hingeGeo, hingeMat);
+    hinge.position.set(x, boardThickness + borderHeight + 0.05, tileBaseZ + tileDepth * 0.2);
+    hinge.receiveShadow = true;
+    scene.add(hinge);
+  }
+
+  function updateOpenSumDisplay() {
+    const openSum = tiles
+      .filter(t => t.state !== 'closed')
+      .reduce((s, t) => s + t.number, 0);
+    openSumValueEl.textContent = openSum.toString();
+  }
+
+  updateOpenSumDisplay();
+
+  // ----- Dice -----
+  const dice = [];
+  const diceSize = 1.0;
+
+  const diceGeometry = new RoundedBoxGeometry(
+    diceSize,
+    diceSize,
+    diceSize,
+    6,                // segments for smoother edges
+    diceSize * 0.18   // corner radius
+  );
+  const diceBaseMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0xf0e8df),
+    roughness: 0.4,
+    metalness: 0.1
+  });
+
+  // Generate simple pip textures on the six faces
+  const pipTextures = {};
+  function createPipTexture(value) {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f4eee6';
+    ctx.fillRect(0, 0, size, size);
+
+    const grad = ctx.createRadialGradient(size * 0.3, size * 0.2, 10, size * 0.5, size * 0.6, size * 0.9);
+    grad.addColorStop(0, 'rgba(255,255,255,0.7)');
+    grad.addColorStop(1, 'rgba(210,190,170,0.9)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    const pipRadius = size * 0.095;
+    const positions = [
+      [0.25, 0.25],
+      [0.75, 0.75],
+      [0.25, 0.75],
+      [0.75, 0.25],
+      [0.25, 0.5],
+      [0.75, 0.5],
+      [0.5, 0.5],
+    ];
+
+    ctx.fillStyle = '#1e1a1a';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 8;
+
+    function drawPip(ix, iy) {
+      const x = ix * size;
+      const y = iy * size;
+      ctx.beginPath();
+      ctx.arc(x, y, pipRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    switch (value) {
+      case 1:
+        drawPip(positions[6][0], positions[6][1]);
+        break;
+      case 2:
+        drawPip(positions[0][0], positions[0][1]);
+        drawPip(positions[1][0], positions[1][1]);
+        break;
+      case 3:
+        drawPip(positions[0][0], positions[0][1]);
+        drawPip(positions[6][0], positions[6][1]);
+        drawPip(positions[1][0], positions[1][1]);
+        break;
+      case 4:
+        drawPip(positions[0][0], positions[0][1]);
+        drawPip(positions[1][0], positions[1][1]);
+        drawPip(positions[2][0], positions[2][1]);
+        drawPip(positions[3][0], positions[3][1]);
+        break;
+      case 5:
+        drawPip(positions[0][0], positions[0][1]);
+        drawPip(positions[1][0], positions[1][1]);
+        drawPip(positions[2][0], positions[2][1]);
+        drawPip(positions[3][0], positions[3][1]);
+        drawPip(positions[6][0], positions[6][1]);
+        break;
+      case 6:
+        drawPip(positions[0][0], positions[0][1]);
+        drawPip(positions[1][0], positions[1][1]);
+        drawPip(positions[2][0], positions[2][1]);
+        drawPip(positions[3][0], positions[3][1]);
+        drawPip(positions[4][0], positions[4][1]);
+        drawPip(positions[5][0], positions[5][1]);
+        break;
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    return texture;
+  }
+
+  function getPipTexture(value) {
+    if (!pipTextures[value]) {
+      pipTextures[value] = createPipTexture(value);
+    }
+    return pipTextures[value];
+  }
+
+  // We'll map faces so that:
+  // +Y -> 1, -Y -> 6, +X -> 3, -X -> 4, +Z -> 2, -Z -> 5
+const diceMaterials = [
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(3) }), // +X
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(4) }), // -X
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(1) }), // +Y
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(6) }), // -Y
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(2) }), // +Z
+  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(5) }), // -Z
+];
+  function createDie(startPos) {
+    const mesh = new THREE.Mesh(diceGeometry, diceMaterials);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+
+    const shape = new CANNON.Box(new CANNON.Vec3(diceSize / 2, diceSize / 2, diceSize / 2));
+    const body = new CANNON.Body({
+      mass: 1,
+      shape,
+      material: defaultMaterial,
+      sleepTimeLimit: 0.6,
+      sleepSpeedLimit: 0.3
+    });
+    body.position.set(startPos.x, startPos.y, startPos.z);
+    world.addBody(body);
+
+    // Sound on collision — fires via cannon-es collision event.
+    // Branches on whether the other body is a die or a surface.
+    let lastClackTime = -1;
+    body.addEventListener('collide', (e) => {
+      if (!audioCtx) return;                          // silent before first roll
+      const now = audioCtx.currentTime;
+      const v = Math.abs(e.contact.getImpactVelocityAlongNormal());
+      if (v < 1.0) return;                            // ignore gentle rolling contact
+
+      const isDieDie = dice.some(d => d.body === e.body);
+      if (isDieDie) {
+        // Shared cooldown — both bodies fire this event, only play once
+        if (now - lastDieDieSoundTime < 0.12) return;
+        lastDieDieSoundTime = now;
+        const gain = Math.min(0.44, v * 0.030);
+        try { playDiceDieHit(audioCtx, now, gain); } catch (_) {}
+      } else {
+        if (now - lastClackTime < 0.10) return;       // 100 ms cooldown per die
+        lastClackTime = now;
+        const gain = Math.min(0.38, v * 0.024);
+        try { playDiceClack(audioCtx, now, gain); } catch (_) {}
+      }
+    });
+
+    return { mesh, body };
+  }
+
+  // Ground body top = boardThickness + 0.1 = 0.7; die rests with center at 0.7 + 0.5 = 1.2
+  const dieRestY = boardThickness + 0.1 + diceSize / 2 + 0.02;  // 1.22 — just above board
+  // Place starting dice near the centre-right of the felt, ready for the first roll
+  dice.push(createDie(new THREE.Vector3( 2.8, dieRestY,  0.5)));
+  dice.push(createDie(new THREE.Vector3( 1.3, dieRestY, -0.5)));
+
+  function syncDiceMeshes() {
+    for (const d of dice) {
+      d.mesh.position.copy(d.body.position);
+      d.mesh.quaternion.copy(d.body.quaternion);
+    }
+  }
+
+  // Compute die value from orientation
+  const faceNormals = [
+    { normal: new CANNON.Vec3( 1, 0, 0), value: 3 },
+    { normal: new CANNON.Vec3(-1, 0, 0), value: 4 },
+    { normal: new CANNON.Vec3( 0, 1, 0), value: 1 },
+    { normal: new CANNON.Vec3( 0,-1, 0), value: 6 },
+    { normal: new CANNON.Vec3( 0, 0, 1), value: 2 },
+    { normal: new CANNON.Vec3( 0, 0,-1), value: 5 },
+  ];
+  const worldUp = new CANNON.Vec3(0, 1, 0);
+  const temp = new CANNON.Vec3();
+
+  function getDieValue(die) {
+    let bestValue = 1;
+    let bestDot = -Infinity;
+    for (const face of faceNormals) {
+      die.body.quaternion.vmult(face.normal, temp);
+      const dot = temp.dot(worldUp);
+      if (dot > bestDot) {
+        bestDot = dot;
+        bestValue = face.value;
+      }
+    }
+    return bestValue;
+  }
+
+  // ----- Game logic -----
+  let canRoll = true;
+  let diceSettled = true;   // true = not waiting for a roll; set false by rollDice()
+  let settledFrames = 0;
+  let targetRollValue = null;
+  let currentSelection = [];
+  let validTileNumbers = new Set();
+  let gameOver = false;
+  let confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
+  let confettiPieces = [];
+  let confettiAnimId = null;
+
+  // ----- Audio -----
+  let audioCtx = null;
+  let lastDieDieSoundTime = -1;   // shared across both dice so they don't double-fire
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  // Synthesise one wooden thump: pitched sine drop (body resonance) + noise burst (surface transient)
+  function playWoodThump(ctx, when, gain) {
+    // Body resonance: sine wave that drops in pitch, like wood being struck
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(260, when);
+    osc.frequency.exponentialRampToValueAtTime(85, when + 0.055);
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(gain * 0.65, when);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.075);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(when);
+    osc.stop(when + 0.08);
+
+    // Surface transient: short filtered noise burst
+    const bufSize = Math.ceil(ctx.sampleRate * 0.06);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 500;
+    bp.Q.value = 1.1;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(gain * 0.38, when);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.042);
+    noise.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(when);
+    noise.stop(when + 0.05);
+  }
+
+  // Short "tock" played each time a die hits a surface.
+  // gain is already scaled to impact force by the caller.
+  function playDiceClack(ctx, when, gain) {
+    // Pitched transient: sine drop (harder/brighter than the wood tile thump)
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(680, when);
+    osc.frequency.exponentialRampToValueAtTime(210, when + 0.038);
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(gain * 0.55, when);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.055);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(when);
+    osc.stop(when + 0.06);
+
+    // Noise burst (surface grain)
+    const bufSize = Math.ceil(ctx.sampleRate * 0.04);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 600;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(gain * 0.45, when);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.028);
+    noise.connect(hp);
+    hp.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(when);
+    noise.stop(when + 0.04);
+  }
+
+  // Rattle played the moment the roll starts — sounds like dice being cast from a hand.
+  function playDiceRattle() {
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      // 5 staggered clicks with a slight random offset each, decaying in volume
+      for (let i = 0; i < 5; i++) {
+        const t = now + i * 0.052 + Math.random() * 0.018;
+        const gain = 0.22 * Math.pow(0.72, i);   // each click a bit softer
+
+        const bufSize = Math.ceil(ctx.sampleRate * 0.038);
+        const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+        const ch = buf.getChannelData(0);
+        for (let j = 0; j < bufSize; j++) ch[j] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buf;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 700 + Math.random() * 500;
+        bp.Q.value = 2.2;
+        const amp = ctx.createGain();
+        amp.gain.setValueAtTime(gain, t);
+        amp.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
+        noise.connect(bp);
+        bp.connect(amp);
+        amp.connect(ctx.destination);
+        noise.start(t);
+        noise.stop(t + 0.04);
+      }
+    } catch (_) { /* silent fallback */ }
+  }
+
+  // Soft air-rush that plays for the duration of the dice's flight.
+  // Bandpass noise sweeping high → mid simulates the Doppler-ish rush of the throw.
+  // Two layers: a brief high whistle (initial throw) + a longer mid-frequency rush.
+  function playDiceWhoosh() {
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+
+      // High-frequency whistle — short, represents the throw impulse
+      const whistleEnd = 0.30;
+      const wBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * whistleEnd), ctx.sampleRate);
+      const wCh = wBuf.getChannelData(0);
+      for (let i = 0; i < wCh.length; i++) wCh[i] = Math.random() * 2 - 1;
+      const whistle = ctx.createBufferSource();
+      whistle.buffer = wBuf;
+      const wBp = ctx.createBiquadFilter();
+      wBp.type = 'bandpass';
+      wBp.frequency.setValueAtTime(2200, now);
+      wBp.frequency.exponentialRampToValueAtTime(800, now + whistleEnd);
+      wBp.Q.value = 2.0;
+      const wAmp = ctx.createGain();
+      wAmp.gain.setValueAtTime(0.0001, now);
+      wAmp.gain.exponentialRampToValueAtTime(0.07, now + 0.03);   // quick attack
+      wAmp.gain.exponentialRampToValueAtTime(0.0001, now + whistleEnd);
+      whistle.connect(wBp);
+      wBp.connect(wAmp);
+      wAmp.connect(ctx.destination);
+      whistle.start(now);
+      whistle.stop(now + whistleEnd + 0.02);
+
+      // Mid-frequency rush — lasts the full flight, fades out as dice hit the felt
+      const rushEnd = 0.65;
+      const rBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * rushEnd), ctx.sampleRate);
+      const rCh = rBuf.getChannelData(0);
+      for (let i = 0; i < rCh.length; i++) rCh[i] = Math.random() * 2 - 1;
+      const rush = ctx.createBufferSource();
+      rush.buffer = rBuf;
+      const rBp = ctx.createBiquadFilter();
+      rBp.type = 'bandpass';
+      rBp.frequency.setValueAtTime(900, now);
+      rBp.frequency.exponentialRampToValueAtTime(320, now + rushEnd);
+      rBp.Q.value = 1.3;
+      const rAmp = ctx.createGain();
+      rAmp.gain.setValueAtTime(0.0001, now);
+      rAmp.gain.exponentialRampToValueAtTime(0.09, now + 0.06);   // slightly slower attack
+      rAmp.gain.exponentialRampToValueAtTime(0.0001, now + rushEnd);
+      rush.connect(rBp);
+      rBp.connect(rAmp);
+      rAmp.connect(ctx.destination);
+      rush.start(now);
+      rush.stop(now + rushEnd + 0.02);
+    } catch (_) { /* silent fallback */ }
+  }
+
+  // Hard click when two dice collide with each other — brighter and more resonant
+  // than a surface hit because both objects are dense and hard.
+  function playDiceDieHit(ctx, when, gain) {
+    // Higher-pitched ring: sine at ~900 Hz decaying slowly
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(920, when);
+    osc.frequency.exponentialRampToValueAtTime(380, when + 0.025);
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(gain * 0.65, when);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.13);  // longer ring
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(when);
+    osc.stop(when + 0.14);
+
+    // Sharp transient click
+    const bufSize = Math.ceil(ctx.sampleRate * 0.022);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) ch[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1400;
+    bp.Q.value = 1.8;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(gain * 0.40, when);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.016);
+    noise.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(when);
+    noise.stop(when + 0.025);
+  }
+
+  // Descending minor figure played when the game ends with no moves left.
+  // Triangle wave for a warmer "horn" timbre; last note bends down for the classic
+  // sad-trombone deflation.  A4 → F4 → D4 → A3↓
+  function playGameOverSound() {
+    try {
+      const ctx = getAudioCtx();
+      const start = ctx.currentTime + 0.35;  // brief pause for drama
+
+      const notes = [
+        { freq: 440, delay: 0.00, dur: 0.38 },   // A4
+        { freq: 349, delay: 0.20, dur: 0.38 },   // F4
+        { freq: 294, delay: 0.40, dur: 0.38 },   // D4
+        { freq: 220, delay: 0.60, dur: 0.95 },   // A3 — long, bends right down
+      ];
+
+      notes.forEach(({ freq, delay, dur }, i) => {
+        const t = start + delay;
+        const isLast = i === notes.length - 1;
+
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        // Every note droops a little; the last one bends significantly downward
+        osc.frequency.exponentialRampToValueAtTime(freq * (isLast ? 0.70 : 0.96), t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.17, t + 0.018);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+      });
+    } catch (_) { /* silent fallback */ }
+  }
+
+  // Celebratory ascending bell arpeggio + sustained chord played when the player wins.
+  // Scheduled 440 ms ahead so it starts right as the last tile finishes settling.
+  function playWinSound() {
+    try {
+      const ctx = getAudioCtx();
+      const start = ctx.currentTime + 0.44;
+
+      // Ascending arpeggio — C5, E5, G5, C6
+      const arpFreqs = [523, 659, 784, 1047];
+      const spacing  = 0.13;
+      const ringOut  = 0.60;
+
+      arpFreqs.forEach((freq, i) => {
+        const t = start + i * spacing;
+
+        // Sine fundamental — bell-like sharp attack, long ring
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const gFund = ctx.createGain();
+        gFund.gain.setValueAtTime(0.0001, t);
+        gFund.gain.exponentialRampToValueAtTime(0.20, t + 0.012);
+        gFund.gain.exponentialRampToValueAtTime(0.0001, t + ringOut);
+        osc.connect(gFund);
+        gFund.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + ringOut + 0.05);
+
+        // Inharmonic partial (×2.76) — gives each note a metallic shimmer
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.value = freq * 2.76;
+        const gShim = ctx.createGain();
+        gShim.gain.setValueAtTime(0.0001, t);
+        gShim.gain.exponentialRampToValueAtTime(0.06, t + 0.012);
+        gShim.gain.exponentialRampToValueAtTime(0.0001, t + ringOut * 0.40);
+        osc2.connect(gShim);
+        gShim.connect(ctx.destination);
+        osc2.start(t);
+        osc2.stop(t + ringOut + 0.05);
+      });
+
+      // Sustained C-major chord landing after the arpeggio
+      const chordT     = start + arpFreqs.length * spacing + 0.06;
+      const chordGains = [0.14, 0.10, 0.07, 0.05];   // C5, E5, G5, C6
+      arpFreqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, chordT);
+        g.gain.exponentialRampToValueAtTime(chordGains[i], chordT + 0.025);
+        g.gain.exponentialRampToValueAtTime(0.0001, chordT + 1.5);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(chordT);
+        osc.stop(chordT + 1.6);
+      });
+    } catch (_) { /* silent fallback */ }
+  }
+
+  // Called when a tile flip animation begins.
+  // Schedules two thumps aligned with the visual bounce:
+  //   1. Main slam  — when tile reaches flat (tImpact = 60% × 0.38 s ≈ 0.228 s)
+  //   2. Soft settle — when tile comes to rest (100% × 0.38 s = 0.38 s)
+  function playTileFlipSound() {
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      playWoodThump(ctx, now + 0.228, 0.28);   // main slam
+      playWoodThump(ctx, now + 0.390, 0.07);   // soft settle
+    } catch (_) { /* audio not supported — silent */ }
+  }
+
+  function resizeConfettiCanvas() {
+    if (!confettiCanvas || !confettiCtx) return;
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+
+  resizeConfettiCanvas();
+
+  function showGameOverOverlay({ perfect, score }) {
+    if (!gameOverOverlay) return;
+    if (perfect) {
+      gameOverTitleEl.textContent = 'Shut The Box!';
+      gameOverSubtitleEl.textContent = 'Beautifully done – every tile is closed.';
+      gameOverScoreEl.textContent = 'Score: 0';
+    } else {
+      gameOverTitleEl.textContent = 'No More Moves';
+      gameOverSubtitleEl.textContent = 'The box stays partially open this round.';
+      gameOverScoreEl.textContent = `Score: ${score}`;
+    }
+    gameOverOverlay.classList.add('visible');
+    if (perfect) {
+      startConfetti();
+      playWinSound();
+    } else {
+      playGameOverSound();
+    }
+  }
+
+  function hideGameOverOverlay() {
+    if (!gameOverOverlay) return;
+    gameOverOverlay.classList.remove('visible');
+    stopConfetti();
+  }
+
+  if (restartButton) {
+    restartButton.addEventListener('click', () => {
+      if (!gameOver) return;
+      startNewGame();
+    });
+  }
+
+  function createConfettiPiece() {
+    const colors = ['#ffd86f', '#f7b733', '#ff7e67', '#7cf29c', '#7ad0ff', '#e97bff'];
+    const size = 4 + Math.random() * 6;
+    return {
+      x: Math.random() * window.innerWidth,
+      y: -20 - Math.random() * 40,
+      vx: -1 + Math.random() * 2,
+      vy: 2 + Math.random() * 3,
+      size,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (-0.1 + Math.random() * 0.2)
+    };
+  }
+
+  function startConfetti() {
+    if (!confettiCtx) return;
+    confettiPieces = [];
+    for (let i = 0; i < 160; i++) {
+      confettiPieces.push(createConfettiPiece());
+    }
+
+    function loop() {
+      confettiAnimId = requestAnimationFrame(loop);
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+      if (Math.random() < 0.3 && confettiPieces.length < 240) {
+        confettiPieces.push(createConfettiPiece());
+      }
+
+      for (let i = 0; i < confettiPieces.length; i++) {
+        const p = confettiPieces[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.02;
+        p.rotation += p.rotationSpeed;
+
+        if (p.y - p.size > window.innerHeight) {
+          confettiPieces[i] = createConfettiPiece();
+          continue;
+        }
+
+        confettiCtx.save();
+        confettiCtx.translate(p.x, p.y);
+        confettiCtx.rotate(p.rotation);
+        confettiCtx.fillStyle = p.color;
+        confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.6);
+        confettiCtx.restore();
+      }
+    }
+
+    if (!confettiAnimId) {
+      loop();
+    }
+  }
+
+  function stopConfetti() {
+    if (confettiAnimId) {
+      cancelAnimationFrame(confettiAnimId);
+      confettiAnimId = null;
+    }
+    if (confettiCtx && confettiCanvas) {
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+    confettiPieces = [];
+  }
+
+  function resetSelection() {
+    currentSelection = [];
+    selectedValueEl.textContent = '0';
+    tiles.forEach(t => t.isSelected = false);
+  }
+
+  function setMessage(text) {
+    messageEl.innerHTML = text;
+  }
+
+  // Returns true when any subset of `nums` sums exactly to `target`.
+  function hasSubsetSum(nums, target) {
+    if (target === 0) return true;
+    if (target < 0 || nums.length === 0) return false;
+    return hasSubsetSum(nums.slice(1), target - nums[0]) ||
+           hasSubsetSum(nums.slice(1), target);
+  }
+
+  function computeAllValidTilesForRoll(roll) {
+    const openTiles = tiles.filter(t => t.state === 'open');
+    const numbers = openTiles.map(t => t.number);
+    const valid = new Set();
+
+    const n = numbers.length;
+    function backtrack(i, sum, used) {
+      if (sum === roll && used.length > 0) {
+        for (const num of used) valid.add(num);
+      }
+      if (i >= n || sum >= roll) return;
+      // include
+      backtrack(i + 1, sum + numbers[i], used.concat(numbers[i]));
+      // skip
+      backtrack(i + 1, sum, used);
+    }
+    backtrack(0, 0, []);
+
+    return valid;
+  }
+
+  function updateTileMaterials() {
+    const shouldHighlight = targetRollValue !== null && !gameOver;
+    tiles.forEach(tile => {
+      if (tile.state === 'closed') {
+        tile.mesh.material = tileMatClosed;
+        if (tile.highlightDot) tile.highlightDot.visible = false;
+        return;
+      }
+      // Base material with number texture
+      const mat = createTileMaterial(tile.number);
+
+      tile.mesh.material = mat;
+
+      // Show small green dot in top-right for valid/selected tiles after a roll
+      if (tile.highlightDot) {
+        tile.highlightDot.visible =
+          shouldHighlight && (tile.isSelected || validTileNumbers.has(tile.number));
+      }
+    });
+  }
+
+  function onRollComplete(total) {
+    targetRollValue = total;
+    rollValueEl.textContent = total.toString();
+    resetSelection();
+
+    const openTiles = tiles.filter(t => t.state === 'open');
+    if (openTiles.length === 0) {
+      setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
+      canRoll = true;
+      rollButton.disabled = false;
+      gameOver = true;
+      showGameOverOverlay({ perfect: true, score: 0 });
+      return;
+    }
+
+    validTileNumbers = computeAllValidTilesForRoll(total);
+    updateTileMaterials();
+
+    if (validTileNumbers.size === 0) {
+      const openSum = openTiles.reduce((s, t) => s + t.number, 0);
+      setMessage(`No moves. Your score is <strong>${openSum}</strong>. Click Roll to start a new game.`);
+      canRoll = true;
+      rollButton.disabled = false;
+      gameOver = true;
+      showGameOverOverlay({ perfect: false, score: openSum });
+    } else {
+      setMessage('Select any glowing tiles whose sum matches the roll.');
+    }
+  }
+
+  function startNewGame() {
+    tiles.forEach(tile => {
+      tile.state = 'open';
+      tile.isSelected = false;
+      tile.pivot.rotation.x = -Math.PI * 0.06;
+      tile.mesh.position.set(0, tileHeight / 2, 0);
+    });
+    targetRollValue = null;
+    gameOver = false;
+    validTileNumbers.clear();
+    resetSelection();
+    updateTileMaterials();
+    updateOpenSumDisplay();
+    hideGameOverOverlay();
+    validTileNumbers.clear();
+    rollValueEl.textContent = '–';
+    selectedValueEl.textContent = '0';
+    setMessage('Click <strong>Roll Dice</strong> to begin.');
+  }
+
+  // Animate and mark a single tile as closed (sound + physics-bounce easing).
+  // Game-state updates are handled by the caller.
+  function flipTileDown(tile) {
+    tile.state = 'closed';
+    tile.isSelected = false;
+    playTileFlipSound();
+    const startRotation = tile.pivot.rotation.x;
+    const endRotation   = -Math.PI / 2;
+    const duration = 0.38;
+    const startTime = performance.now();
+    const tImpact = 0.60, tPeak = 0.78, bounce = 0.13;
+    function step(now) {
+      const t = Math.min(1, (now - startTime) / (duration * 1000));
+      let ease;
+      if (t < tImpact) {
+        const s = t / tImpact;
+        ease = s * s * s;
+      } else if (t < tPeak) {
+        const s = (t - tImpact) / (tPeak - tImpact);
+        ease = 1 - bounce * s * s;
+      } else {
+        const s = (t - tPeak) / (1 - tPeak);
+        ease = (1 - bounce) + bounce * (1 - (1 - s) * (1 - s));
+      }
+      tile.pivot.rotation.x = startRotation + (endRotation - startRotation) * ease;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ----- Rolling -----
+  function rollDice() {
+    if (!canRoll) return;
+    canRoll = false;
+    diceSettled = false;
+    settledFrames = 0;
+    targetRollValue = null;
+    rollValueEl.textContent = '…';
+    setMessage('Rolling…');
+    playDiceRattle();
+    playDiceWhoosh();
+
+    // Physics reference:
+    //   ground body top  = boardThickness + 0.1  = 0.7
+    //   die resting (center) = 0.7 + 0.5          = 1.2
+    //   front physics border (inner face) ≈ z = 4.5   (board "near" side)
+    //   back  physics border (inner face) ≈ z = −5.2  (tiles side)
+    //   gravity = −20 units/s²
+    //
+    // Strategy: start dice just outside the front playing-field wall, elevated
+    // well above the border rail (~4 units).  They fly OVER the visible rim and
+    // arc down onto the felt — exactly like a real hand throw.
+
+    dice.forEach((d, idx) => {
+      d.body.velocity.setZero();
+      d.body.angularVelocity.setZero();
+
+      // ---- spawn position: player's "hand", front portion of the table ----------
+      // Physics front border (borderBottom) back face is at z ≈ 4.5.
+      // Start dice at z < 4.0 so they are safely inside the field — elevated high
+      // enough (y > border top ≈ 2.1) so they look like they're thrown from above.
+      const handX  = (idx === 0 ? -0.55 : 0.55) + (Math.random() - 0.5) * 2.2;
+      const handZ  = 3.0 + (Math.random() - 0.5) * 0.8 + idx * 0.3;
+      // Height: 3.5–5 units above board surface (die bottom well above border rail at 2.1)
+      const handY  = boardThickness + 3.5 + Math.random() * 1.5;
+
+      d.body.position.set(handX, handY, handZ);
+
+      // ---- random tumbling orientation ----------------------------------------
+      d.body.quaternion.setFromEuler(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        'XYZ'
+      );
+
+      // ---- throw velocity ------------------------------------------------------
+      // Main component: −Z (toward the tiles at the back of the board)
+      // Vary speed 6–10 units/s; add slight random lateral angle and small upward arc
+      const throwSpeed = 6.0 + Math.random() * 4.0;
+      const sideAngle  = (Math.random() - 0.5) * 0.5;   // ±0.25 rad lateral spread
+
+      const vx = Math.sin(sideAngle) * throwSpeed + (Math.random() - 0.5) * 1.2;
+      const vy = 0.8 + Math.random() * 1.4;              // small upward arc
+      const vz = -(Math.cos(sideAngle) * throwSpeed);    // toward the tile rail
+
+      d.body.velocity.set(vx, vy, vz);
+
+      // ---- spin / angular velocity: high & random (real dice tumble a lot) ----
+      const spin = 12 + Math.random() * 14;              // 12–26 rad/s
+      d.body.angularVelocity.set(
+        (Math.random() - 0.5) * spin,
+        (Math.random() - 0.5) * spin,
+        (Math.random() - 0.5) * spin
+      );
+
+      d.body.wakeUp();
+    });
+
+    rollButton.disabled = true;
+  }
+
+  rollButton.addEventListener('click', () => {
+    // If game ended, a click restarts; otherwise continue current game
+    if (gameOver) {
+      startNewGame();
+    }
+    rollDice();
+  });
+
+  // ----- Mouse picking -----
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  function onPointerDown(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(tileRaycastMeshes);
+    if (intersects.length === 0) return;
+
+    const mesh = intersects[0].object;
+    const tile = tiles.find(t => t.mesh === mesh);
+    if (!tile) return;
+    if (tile.state !== 'open') return;
+    if (!validTileNumbers.has(tile.number)) return;
+    if (targetRollValue == null) return; // no roll yet
+    if (canRoll) return; // we only select while resolving current roll
+
+    const remaining = targetRollValue - tile.number;
+
+    // Guard: ensure remaining open tiles can still reach the remaining sum
+    if (remaining > 0) {
+      const stillOpen = tiles
+        .filter(t => t.state === 'open' && t !== tile)
+        .map(t => t.number);
+      if (!hasSubsetSum(stillOpen, remaining)) return;
+    }
+
+    // Immediately flip this tile
+    flipTileDown(tile);
+
+    // Update "Selected" counter with total covered so far
+    const originalTotal = parseInt(rollValueEl.textContent) || 0;
+    selectedValueEl.textContent = (originalTotal - remaining).toString();
+
+    if (remaining === 0) {
+      // Round complete
+      targetRollValue = null;
+      validTileNumbers = new Set();
+      updateTileMaterials();
+
+      const allClosed = tiles.every(t => t.state === 'closed');
+      setTimeout(() => {
+        if (allClosed) {
+          setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
+          gameOver = true;
+          playWinSound();
+        } else {
+          setMessage('Roll again!');
+        }
+        canRoll = true;
+        rollButton.disabled = false;
+      }, 500);
+    } else {
+      // More tiles needed — update remaining target and recompute valid tiles
+      targetRollValue = remaining;
+      validTileNumbers = computeAllValidTilesForRoll(remaining);
+      updateTileMaterials();
+      setMessage(`Select tiles to make <strong>${remaining}</strong> more.`);
+    }
+  }
+
+  window.addEventListener('pointerdown', onPointerDown);
+
+  // ----- Animation loop -----
+  let lastTime = performance.now();
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+    lastTime = now;
+
+    world.step(1 / 60, dt, 4);
+    syncDiceMeshes();
+
+    // Check dice settle (more sensitive for gentle throws)
+    if (!diceSettled) {
+      const v1 = dice[0].body.velocity.length();
+      const w1 = dice[0].body.angularVelocity.length();
+      const v2 = dice[1].body.velocity.length();
+      const w2 = dice[1].body.angularVelocity.length();
+      const threshold = 0.1;  // More sensitive threshold for gentle throws
+
+      if (v1 < threshold && w1 < threshold && v2 < threshold && w2 < threshold) {
+        settledFrames++;
+        if (settledFrames > 25) {  // Wait longer to ensure dice are truly settled
+          diceSettled = true;
+          const val1 = getDieValue(dice[0]);
+          const val2 = getDieValue(dice[1]);
+          const total = val1 + val2;
+          onRollComplete(total);
+        }
+      } else {
+        settledFrames = 0;
+      }
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate(performance.now());
+
+  // ----- Resize -----
+  window.addEventListener('resize', () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    resizeConfettiCanvas();
+  });
+
+  // Initial message
+  setMessage('Click <strong>Roll Dice</strong>, then click glowing tiles to match the roll.');
+</script>
+</body>
+</html>
