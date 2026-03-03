@@ -952,6 +952,16 @@ const diceMaterials = [
     return bestValue;
   }
 
+  function isDieFlat(die) {
+    let bestDot = -Infinity;
+    for (const face of faceNormals) {
+      die.body.quaternion.vmult(face.normal, temp);
+      const dot = temp.dot(worldUp);
+      if (dot > bestDot) bestDot = dot;
+    }
+    return bestDot > 0.85; // face must be within ~32° of horizontal
+  }
+
   // ----- Game logic -----
   let canRoll = true;
   let diceSettled = true;   // true = not waiting for a roll; set false by rollDice()
@@ -1644,6 +1654,7 @@ const diceMaterials = [
 
     // Immediately flip this tile
     flipTileDown(tile);
+    updateOpenSumDisplay();
 
     // Update "Selected" counter with total covered so far
     const originalTotal = parseInt(rollValueEl.textContent) || 0;
@@ -1660,7 +1671,7 @@ const diceMaterials = [
         if (allClosed) {
           setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
           gameOver = true;
-          playWinSound();
+          showGameOverOverlay({ perfect: true, score: 0 });
         } else {
           setMessage('Roll again!');
         }
@@ -1699,12 +1710,28 @@ const diceMaterials = [
 
       if (v1 < threshold && w1 < threshold && v2 < threshold && w2 < threshold) {
         settledFrames++;
-        if (settledFrames > 25) {  // Wait longer to ensure dice are truly settled
-          diceSettled = true;
-          const val1 = getDieValue(dice[0]);
-          const val2 = getDieValue(dice[1]);
-          const total = val1 + val2;
-          onRollComplete(total);
+        if (settledFrames > 25) {
+          if (isDieFlat(dice[0]) && isDieFlat(dice[1])) {
+            diceSettled = true;
+            const val1 = getDieValue(dice[0]);
+            const val2 = getDieValue(dice[1]);
+            const total = val1 + val2;
+            onRollComplete(total);
+          } else if (settledFrames > 90) {
+            // Die is stuck at an angle — nudge it free
+            dice.forEach(d => {
+              if (!isDieFlat(d)) {
+                d.body.wakeUp();
+                d.body.velocity.set((Math.random() - 0.5) * 2, 1.5, (Math.random() - 0.5) * 2);
+                d.body.angularVelocity.set(
+                  (Math.random() - 0.5) * 5,
+                  (Math.random() - 0.5) * 5,
+                  (Math.random() - 0.5) * 5
+                );
+              }
+            });
+            settledFrames = 0;
+          }
         }
       } else {
         settledFrames = 0;
