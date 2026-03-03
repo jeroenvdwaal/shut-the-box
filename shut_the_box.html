@@ -931,7 +931,7 @@ const diceMaterials = [
       }
     });
 
-    return { mesh, body };
+    return { mesh, body, snapAnim: null, nudgeCount: 0 };
   }
 
   // Ground body top = boardThickness + 0.1 = 0.7; die rests with center at 0.7 + 0.5 = 1.2
@@ -943,7 +943,14 @@ const diceMaterials = [
   function syncDiceMeshes() {
     for (const d of dice) {
       d.mesh.position.copy(d.body.position);
-      d.mesh.quaternion.copy(d.body.quaternion);
+      if (d.snapAnim) {
+        d.snapAnim.frame++;
+        const t = Math.min(1, d.snapAnim.frame / d.snapAnim.totalFrames);
+        d.mesh.quaternion.slerpQuaternions(d.snapAnim.from, d.snapAnim.to, t);
+        if (t >= 1) d.snapAnim = null;
+      } else {
+        d.mesh.quaternion.copy(d.body.quaternion);
+      }
     }
   }
 
@@ -984,8 +991,9 @@ const diceMaterials = [
   }
 
   // Rotate the die's quaternion so its nearest face points exactly straight up.
+  // Snaps the physics body immediately (for correct value reading) and starts a
+  // smooth mesh animation so the correction doesn't look like a jarring teleport.
   function snapDieFlat(die) {
-    // Find which face is currently closest to pointing up
     let bestNormal = new CANNON.Vec3();
     let bestDot = -Infinity;
     const tmpN = new CANNON.Vec3();
@@ -999,20 +1007,29 @@ const diceMaterials = [
     }
     if (bestDot > 0.999) return; // already flat
 
-    // Compute the rotation axis and angle to bring bestNormal to worldUp
     const axis = new CANNON.Vec3();
     bestNormal.cross(worldUp, axis);
     const axisLen = axis.length();
-    if (axisLen > 1e-6) {
-      axis.scale(1 / axisLen, axis); // normalise
-      const angle = Math.acos(Math.max(-1, Math.min(1, bestDot)));
-      const correction = new CANNON.Quaternion();
-      correction.setFromAxisAngle(axis, angle);
-      const snapped = correction.mult(die.body.quaternion);
-      die.body.quaternion.set(snapped.x, snapped.y, snapped.z, snapped.w);
-    }
+    if (axisLen < 1e-6) return;
+
+    axis.scale(1 / axisLen, axis);
+    const angle = Math.acos(Math.max(-1, Math.min(1, bestDot)));
+    const correction = new CANNON.Quaternion();
+    correction.setFromAxisAngle(axis, angle);
+    const snapped = correction.mult(die.body.quaternion);
+
+    // Snap physics body immediately so value reading is correct
+    die.body.quaternion.set(snapped.x, snapped.y, snapped.z, snapped.w);
     die.body.velocity.setZero();
     die.body.angularVelocity.setZero();
+
+    // Animate the mesh from its current visual orientation to the snapped target
+    die.snapAnim = {
+      from: die.mesh.quaternion.clone(),
+      to: new THREE.Quaternion(snapped.x, snapped.y, snapped.z, snapped.w),
+      frame: 0,
+      totalFrames: 18,
+    };
   }
 
   // ----- Game logic -----
@@ -1442,6 +1459,8 @@ const diceMaterials = [
     // arc down onto the felt — exactly like a real hand throw.
 
     dice.forEach((d, idx) => {
+      d.snapAnim = null;
+      d.nudgeCount = 0;
       d.body.velocity.setZero();
       d.body.angularVelocity.setZero();
 
@@ -1601,8 +1620,32 @@ const diceMaterials = [
             const val2 = getDieValue(dice[1]);
             const total = val1 + val2;
             onRollComplete(total);
-          } else if (settledFrames > 60) {
-            // Still not flat after ~1 s — snap each stuck die to its nearest face-up orientation
+          } else if (settledFrames === 28) {
+            // Nudge dice that landed on an edge: apply a small angular impulse toward
+            // the nearest flat face so they tip over naturally rather than sitting frozen.
+            // (Limited to 2 nudges per roll; after that the snap fallback takes over.)
+            dice.forEach(d => {
+              if (!isDieFlat(d) && d.nudgeCount < 2) {
+                d.nudgeCount++;
+                const tmpN2 = new CANNON.Vec3();
+                let bDot = -Infinity, bNorm = new CANNON.Vec3();
+                for (const face of faceNormals) {
+                  d.body.quaternion.vmult(face.normal, tmpN2);
+                  const dot = tmpN2.dot(worldUp);
+                  if (dot > bDot) { bDot = dot; bNorm.set(tmpN2.x, tmpN2.y, tmpN2.z); }
+                }
+                const ax = new CANNON.Vec3();
+                bNorm.cross(worldUp, ax);
+                const al = ax.length();
+                if (al > 1e-6) {
+                  ax.scale(1 / al, ax);
+                  const nudge = 4.5;
+                  d.body.angularVelocity.set(ax.x * nudge, ax.y * nudge, ax.z * nudge);
+                }
+              }
+            });
+          } else if (settledFrames > 55) {
+            // Nudge didn't work — smooth-snap each stuck die to its nearest face-up orientation
             dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
             diceSettled = true;
             onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
