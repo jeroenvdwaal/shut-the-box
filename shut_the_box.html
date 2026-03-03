@@ -153,31 +153,49 @@
     }
 
     @keyframes rollButtonReady {
-      0%, 100% {
-        transform: translateY(0) scale(1);
+      0%, 35%, 100% {
+        transform: translateX(0) rotate(0deg);
         box-shadow:
           0 12px 35px rgba(0, 0, 0, 0.7),
           0 0 0 1px rgba(255, 255, 255, 0.3),
-          0 0  0px 0px rgba(247, 183, 51, 0.0);
+          0 0 0px 0px rgba(247, 183, 51, 0.0);
       }
-      50% {
-        transform: translateY(-5px) scale(1.03);
+      18% {
         box-shadow:
-          0 22px 48px rgba(0, 0, 0, 0.75),
-          0 0 0 1px rgba(255, 255, 255, 0.55),
-          0 0 26px 9px rgba(247, 183, 51, 0.38);
+          0 16px 42px rgba(0, 0, 0, 0.75),
+          0 0 0 1px rgba(255, 255, 255, 0.5),
+          0 0 22px 8px rgba(247, 183, 51, 0.30);
       }
+      39% { transform: translateX(-6px) rotate(-10deg); }
+      44% { transform: translateX( 6px) rotate( 9deg); }
+      49% { transform: translateX(-5px) rotate(-7deg); }
+      54% { transform: translateX( 4px) rotate( 5deg); }
+      59% { transform: translateX(-3px) rotate(-3deg); }
+      64% { transform: translateX( 2px) rotate( 2deg); }
+      69% { transform: translateX(0)    rotate(0deg);  }
     }
 
     /* Animate only when the button is actionable */
     #rollButton:not(:disabled) {
-      animation: rollButtonReady 1.8s ease-in-out infinite;
+      animation: rollButtonReady 2.8s ease-in-out infinite;
     }
 
     /* Freeze the animation while the pointer is over it or pressing it */
     #rollButton:hover:not(:disabled),
     #rollButton:active:not(:disabled) {
       animation: none;
+    }
+
+    #rollHint {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.28);
+      letter-spacing: 0.1em;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    #rollButton:disabled ~ #rollHint {
+      opacity: 0;
     }
 
     #message {
@@ -329,7 +347,10 @@
   </div>
 
   <div id="ui-bottom">
-    <button id="rollButton">Roll Dice</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:auto;">
+      <button id="rollButton">🎲 Roll Dice</button>
+      <span id="rollHint">or press Space</span>
+    </div>
   </div>
 </div>
 
@@ -1688,6 +1709,13 @@ const diceMaterials = [
   }
 
   window.addEventListener('pointerdown', onPointerDown);
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !rollButton.disabled) {
+      e.preventDefault();
+      rollButton.click();
+    }
+  });
 
   // ----- Animation loop -----
   let lastTime = performance.now();
