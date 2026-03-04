@@ -1655,6 +1655,7 @@
             setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
             gameOver = true;
             showGameOverOverlay({ perfect: true, score: 0 });
+            rollButton.classList.add('game-over');
           } else {
             setMessage('Roll again!');
           }
