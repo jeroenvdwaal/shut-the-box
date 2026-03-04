@@ -732,7 +732,23 @@
       bumpTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       bumpTexture.wrapS = bumpTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-      return { map: texture, bumpMap: bumpTexture };
+      // Emissive map for glowing number effect
+      const emissiveCanvas = document.createElement('canvas');
+      emissiveCanvas.width = emissiveCanvas.height = size;
+      const eCtx = emissiveCanvas.getContext('2d');
+      eCtx.fillStyle = '#000000'; // Black background
+      eCtx.fillRect(0, 0, size, size);
+      eCtx.font = 'bold 150px system-ui';
+      eCtx.textAlign = 'center';
+      eCtx.textBaseline = 'middle';
+      eCtx.fillStyle = '#ffffff'; // White for the number (glow area)
+      eCtx.fillText(num.toString(), center, center * 1.06);
+
+      const emissiveTexture = new THREE.CanvasTexture(emissiveCanvas);
+      emissiveTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      emissiveTexture.wrapS = emissiveTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+      return { map: texture, bumpMap: bumpTexture, emissiveMap: emissiveTexture };
     }
 
     const numberTextures = {};
@@ -767,7 +783,8 @@
           metalness: 0.1,
           map: textures.map,
           bumpMap: textures.bumpMap,
-          bumpScale: 0.25,  // Increased for a much stronger engraved depth effect
+          emissiveMap: textures.emissiveMap, // Only numbers glow
+          bumpScale: 0.25,
           emissive: new THREE.Color(0x000000),
           emissiveIntensity: 0.0
         });
@@ -1437,6 +1454,28 @@
           tile.highlightDot.visible =
             shouldHighlight && (tile.isSelected || validTileNumbers.has(tile.number));
         }
+
+        // Apply emissive base glow and tracking if the tile is a valid choice or explicitly selected
+        const isHighlighted = shouldHighlight && (tile.isSelected || validTileNumbers.has(tile.number));
+        tile.isHighlighted = isHighlighted;
+
+        if (isHighlighted) {
+          // Only update the front face (index 4) for the breathing number effect
+          const frontMat = matArray[4];
+          frontMat.emissive.setHex(tile.isSelected ? 0xffb732 : 0xc7922a);
+          // Ensure other faces are dark
+          matArray.forEach((m, idx) => {
+            if (idx !== 4) {
+              m.emissive.setHex(0x000000);
+              m.emissiveIntensity = 0.0;
+            }
+          });
+        } else {
+          matArray.forEach(m => {
+            m.emissive.setHex(0x000000);
+            m.emissiveIntensity = 0.0;
+          });
+        }
       });
     }
 
@@ -1690,6 +1729,19 @@
 
       world.step(1 / 60, dt, 4);
       syncDiceMeshes();
+
+      // Breathing animation for highlighted tiles
+      const time = now * 0.003; // Speed of the pulse
+      const breatheIntensity = 0.15 + (Math.sin(time) * 0.5 + 0.5) * 0.25; // Pulses softly between 0.15 and 0.40
+
+      tiles.forEach(tile => {
+        if (tile.isHighlighted) {
+          // Only the front face (index 4) has the emissiveMap and should breathe
+          if (tile.mesh.material[4]) {
+            tile.mesh.material[4].emissiveIntensity = breatheIntensity * 1.5;
+          }
+        }
+      });
 
       // Check dice settle (more sensitive for gentle throws)
       if (!diceSettled) {
