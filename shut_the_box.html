@@ -976,8 +976,10 @@
         mass: 1,
         shape,
         material: defaultMaterial,
-        sleepTimeLimit: 0.6,
-        sleepSpeedLimit: 0.05
+        linearDamping: 0.1,    // Help reduce slide energy over time
+        angularDamping: 0.2,   // Greatly helps prevent endless spinning on an edge/corner
+        sleepTimeLimit: 0.4,   // Go to sleep slightly faster once still
+        sleepSpeedLimit: 0.1   // Make it easier to be considered "still"
       });
       body.position.set(startPos.x, startPos.y, startPos.z);
       world.addBody(body);
@@ -1062,7 +1064,7 @@
         const dot = temp.dot(worldUp);
         if (dot > bestDot) bestDot = dot;
       }
-      return bestDot > 0.85; // face must be within ~32° of horizontal
+      return bestDot > 0.90; // About 25 degrees tolerance
     }
 
     // Rotate the die's quaternion so its nearest face points exactly straight up.
@@ -1694,56 +1696,20 @@
         const w1 = dice[0].body.angularVelocity.length();
         const v2 = dice[1].body.velocity.length();
         const w2 = dice[1].body.angularVelocity.length();
-        const threshold = 0.1;  // More sensitive threshold for gentle throws
+        const threshold = 0.1;
 
         if (v1 < threshold && w1 < threshold && v2 < threshold && w2 < threshold) {
           settledFrames++;
           if (settledFrames > 25) {
-            if (isDieFlat(dice[0]) && isDieFlat(dice[1])) {
-              diceSettled = true;
-              const val1 = getDieValue(dice[0]);
-              const val2 = getDieValue(dice[1]);
-              const total = val1 + val2;
-              onRollComplete(total);
-            } else if (settledFrames === 28) {
-              // Nudge dice that landed on an edge: apply a small angular impulse toward
-              // the nearest flat face so they tip over naturally rather than sitting frozen.
-              // (Limited to 2 nudges per roll; after that the snap fallback takes over.)
-              const nudgeUsed = dice.some(d => !isDieFlat(d) && d.nudgeCount < 2);
-              dice.forEach(d => {
-                if (!isDieFlat(d) && d.nudgeCount < 2) {
-                  d.nudgeCount++;
-                  const tmpN2 = new CANNON.Vec3();
-                  let bDot = -Infinity, bNorm = new CANNON.Vec3();
-                  for (const face of faceNormals) {
-                    d.body.quaternion.vmult(face.normal, tmpN2);
-                    const dot = tmpN2.dot(worldUp);
-                    if (dot > bDot) { bDot = dot; bNorm.set(tmpN2.x, tmpN2.y, tmpN2.z); }
-                  }
-                  const ax = new CANNON.Vec3();
-                  bNorm.cross(worldUp, ax);
-                  const al = ax.length();
-                  if (al > 1e-6) {
-                    ax.scale(1 / al, ax);
-                    const nudge = 4.5;
-                    d.body.angularVelocity.set(ax.x * nudge, ax.y * nudge, ax.z * nudge);
-                  }
-                }
-              });
-              // If nudge budget is already exhausted for all stuck dice, snap them immediately.
-              // (The nudge itself resets settledFrames to 0, making the old >55 fallback
-              //  unreachable when a die keeps oscillating after both nudges.)
-              if (!nudgeUsed) {
-                dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
-                diceSettled = true;
-                onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
-              }
-            } else if (settledFrames > 55) {
-              // Safety net: snap any still-stuck die and conclude the roll.
-              dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
-              diceSettled = true;
-              onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
-            }
+            // Dice have stopped moving. If they aren't flat (e.g. leaning on an edge), snap them.
+            if (!isDieFlat(dice[0])) snapDieFlat(dice[0]);
+            if (!isDieFlat(dice[1])) snapDieFlat(dice[1]);
+
+            diceSettled = true;
+            const val1 = getDieValue(dice[0]);
+            const val2 = getDieValue(dice[1]);
+            const total = val1 + val2;
+            onRollComplete(total);
           }
         } else {
           settledFrames = 0;
