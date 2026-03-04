@@ -711,7 +711,28 @@
       const texture = new THREE.CanvasTexture(canvas);
       texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-      return texture;
+
+      // Bump map for engraved effect
+      const bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = bumpCanvas.height = size;
+      const bCtx = bumpCanvas.getContext('2d');
+
+      // White background (high/flat)
+      bCtx.fillStyle = '#ffffff';
+      bCtx.fillRect(0, 0, size, size);
+
+      bCtx.font = 'bold 150px system-ui';
+      bCtx.textAlign = 'center';
+      bCtx.textBaseline = 'middle';
+      bCtx.fillStyle = '#000000'; // Pure black for deepest engraving
+      bCtx.filter = 'blur(1px)';  // Sharper edges for better depth
+      bCtx.fillText(num.toString(), center, center * 1.06);
+
+      const bumpTexture = new THREE.CanvasTexture(bumpCanvas);
+      bumpTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      bumpTexture.wrapS = bumpTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+      return { map: texture, bumpMap: bumpTexture };
     }
 
     const numberTextures = {};
@@ -739,11 +760,14 @@
 
     function createTileMaterial(num) {
       if (!tileCanvasMatCache[num]) {
+        const textures = getNumberTexture(num);
         const frontMat = new THREE.MeshStandardMaterial({
           color: tileWoodColor,
           roughness: 0.5,
           metalness: 0.1,
-          map: getNumberTexture(num),
+          map: textures.map,
+          bumpMap: textures.bumpMap,
+          bumpScale: 0.25,  // Increased for a much stronger engraved depth effect
           emissive: new THREE.Color(0x000000),
           emissiveIntensity: 0.0
         });
