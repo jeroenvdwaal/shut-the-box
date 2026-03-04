@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Shut the Box 3D</title>
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -153,26 +155,51 @@
     }
 
     @keyframes rollButtonReady {
-      0%, 35%, 100% {
+
+      0%,
+      35%,
+      100% {
         transform: translateX(0) rotate(0deg);
         box-shadow:
           0 12px 35px rgba(0, 0, 0, 0.7),
           0 0 0 1px rgba(255, 255, 255, 0.3),
           0 0 0px 0px rgba(247, 183, 51, 0.0);
       }
+
       18% {
         box-shadow:
           0 16px 42px rgba(0, 0, 0, 0.75),
           0 0 0 1px rgba(255, 255, 255, 0.5),
           0 0 22px 8px rgba(247, 183, 51, 0.30);
       }
-      39% { transform: translateX(-6px) rotate(-10deg); }
-      44% { transform: translateX( 6px) rotate( 9deg); }
-      49% { transform: translateX(-5px) rotate(-7deg); }
-      54% { transform: translateX( 4px) rotate( 5deg); }
-      59% { transform: translateX(-3px) rotate(-3deg); }
-      64% { transform: translateX( 2px) rotate( 2deg); }
-      69% { transform: translateX(0)    rotate(0deg);  }
+
+      39% {
+        transform: translateX(-6px) rotate(-10deg);
+      }
+
+      44% {
+        transform: translateX(6px) rotate(9deg);
+      }
+
+      49% {
+        transform: translateX(-5px) rotate(-7deg);
+      }
+
+      54% {
+        transform: translateX(4px) rotate(5deg);
+      }
+
+      59% {
+        transform: translateX(-3px) rotate(-3deg);
+      }
+
+      64% {
+        transform: translateX(2px) rotate(2deg);
+      }
+
+      69% {
+        transform: translateX(0) rotate(0deg);
+      }
     }
 
     /* Animate only when the button is actionable */
@@ -194,7 +221,7 @@
       transition: opacity 0.2s;
     }
 
-    #rollButton:disabled ~ #rollHint {
+    #rollButton:disabled~#rollHint {
       opacity: 0;
     }
 
@@ -293,10 +320,12 @@
         transform: scale(0.9) translateY(16px);
         opacity: 0;
       }
+
       60% {
         transform: scale(1.03) translateY(0);
         opacity: 1;
       }
+
       100% {
         transform: scale(1) translateY(0);
         opacity: 1;
@@ -313,1367 +342,1380 @@
     }
   </style>
 </head>
+
 <body>
-<div id="container"></div>
-<canvas id="confettiCanvas"></canvas>
-<div id="ui">
-  <div id="ui-top">
-    <div class="panel">
-      <h2>Shut The Box</h2>
-      <p id="message">
-        Click <strong>Roll Dice</strong>, then <strong>click tiles</strong> to match the total. Valid tiles glow softly.
-      </p>
-      <div class="stat-row">
-        <div class="chip">
-          <span class="chip-label">Roll</span>
-          <span class="chip-value" id="rollValue">–</span>
+  <div id="container"></div>
+  <canvas id="confettiCanvas"></canvas>
+  <div id="ui">
+    <div id="ui-top">
+      <div class="panel">
+        <h2>Shut The Box</h2>
+        <p id="message">
+          Click <strong>Roll Dice</strong>, then <strong>click tiles</strong> to match the total. Valid tiles glow
+          softly.
+        </p>
+        <div class="stat-row">
+          <div class="chip">
+            <span class="chip-label">Roll</span>
+            <span class="chip-value" id="rollValue">–</span>
+          </div>
+          <div class="chip">
+            <span class="chip-label">Selected</span>
+            <span class="chip-value" id="selectedValue">0</span>
+          </div>
+          <div class="chip">
+            <span class="chip-label">Open Sum</span>
+            <span class="chip-value" id="openSumValue">45</span>
+          </div>
         </div>
-        <div class="chip">
-          <span class="chip-label">Selected</span>
-          <span class="chip-value" id="selectedValue">0</span>
-        </div>
-        <div class="chip">
-          <span class="chip-label">Open Sum</span>
-          <span class="chip-value" id="openSumValue">45</span>
-        </div>
+      </div>
+
+      <div class="panel" style="max-width:260px">
+        <h2>How to Play</h2>
+        <p>Roll the two dice. Click any glowing tiles whose numbers sum to the roll. When your selection matches the
+          roll, they flip down.</p>
+        <p>If you can’t match the roll, the game ends. Try to shut all tiles.</p>
       </div>
     </div>
 
-    <div class="panel" style="max-width:260px">
-      <h2>How to Play</h2>
-      <p>Roll the two dice. Click any glowing tiles whose numbers sum to the roll. When your selection matches the roll, they flip down.</p>
-      <p>If you can’t match the roll, the game ends. Try to shut all tiles.</p>
+    <div id="ui-bottom">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:auto;">
+        <button id="rollButton">🎲 Roll Dice</button>
+        <span id="rollHint">or press Space</span>
+      </div>
     </div>
   </div>
 
-  <div id="ui-bottom">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:auto;">
-      <button id="rollButton">🎲 Roll Dice</button>
-      <span id="rollHint">or press Space</span>
+  <div id="gameOverOverlay">
+    <div class="game-over-content">
+      <div class="game-over-title" id="gameOverTitle">Game Over</div>
+      <div class="game-over-subtitle" id="gameOverSubtitle">No more moves available.</div>
+      <div class="game-over-score" id="gameOverScore"></div>
+      <button id="restartButton">Restart Game</button>
     </div>
   </div>
-</div>
 
-<div id="gameOverOverlay">
-  <div class="game-over-content">
-    <div class="game-over-title" id="gameOverTitle">Game Over</div>
-    <div class="game-over-subtitle" id="gameOverSubtitle">No more moves available.</div>
-    <div class="game-over-score" id="gameOverScore"></div>
-    <button id="restartButton">Restart Game</button>
-  </div>
-</div>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0?module';
+    import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js?module';
+    import { RoundedBoxGeometry } from 'https://unpkg.com/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js?module';
+    import * as CANNON from 'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js';
 
-<script type="module">
-  import * as THREE from 'https://unpkg.com/three@0.160.0?module';
-  import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js?module';
-  import { RoundedBoxGeometry } from 'https://unpkg.com/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js?module';
-  import * as CANNON from 'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js';
+    // ----- DOM -----
+    const container = document.getElementById('container');
+    const rollButton = document.getElementById('rollButton');
+    const rollValueEl = document.getElementById('rollValue');
+    const selectedValueEl = document.getElementById('selectedValue');
+    const openSumValueEl = document.getElementById('openSumValue');
+    const messageEl = document.getElementById('message');
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const gameOverTitleEl = document.getElementById('gameOverTitle');
+    const gameOverSubtitleEl = document.getElementById('gameOverSubtitle');
+    const gameOverScoreEl = document.getElementById('gameOverScore');
+    const restartButton = document.getElementById('restartButton');
 
-  // ----- DOM -----
-  const container = document.getElementById('container');
-  const rollButton = document.getElementById('rollButton');
-  const rollValueEl = document.getElementById('rollValue');
-  const selectedValueEl = document.getElementById('selectedValue');
-  const openSumValueEl = document.getElementById('openSumValue');
-  const messageEl = document.getElementById('message');
-  const confettiCanvas = document.getElementById('confettiCanvas');
-  const gameOverOverlay = document.getElementById('gameOverOverlay');
-  const gameOverTitleEl = document.getElementById('gameOverTitle');
-  const gameOverSubtitleEl = document.getElementById('gameOverSubtitle');
-  const gameOverScoreEl = document.getElementById('gameOverScore');
-  const restartButton = document.getElementById('restartButton');
+    // ----- Three.js setup -----
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
 
-  // ----- Three.js setup -----
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  container.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x07090d);
+    scene.fog = new THREE.Fog(0x050608, 20, 45);
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x07090d);
-  scene.fog = new THREE.Fog(0x050608, 20, 45);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 14, 20);
 
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.set(0, 14, 20);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.2, 0);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 12;
+    controls.maxDistance = 26;
+    controls.minPolarAngle = Math.PI * 0.18;
+    controls.maxPolarAngle = Math.PI * 0.46;
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 1.2, 0);
-  controls.enableDamping = true;
-  controls.enablePan = false;
-  controls.minDistance = 12;
-  controls.maxDistance = 26;
-  controls.minPolarAngle = Math.PI * 0.18;
-  controls.maxPolarAngle = Math.PI * 0.46;
+    // Lighting – warm, cozy wooden table feel
+    const hemiLight = new THREE.HemisphereLight(0xf5f1e2, 0x050608, 0.7);
+    scene.add(hemiLight);
 
-  // Lighting – warm, cozy wooden table feel
-  const hemiLight = new THREE.HemisphereLight(0xf5f1e2, 0x050608, 0.7);
-  scene.add(hemiLight);
+    const keyLight = new THREE.DirectionalLight(0xfff7e3, 0.9);
+    keyLight.position.set(8, 18, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 5;
+    keyLight.shadow.camera.far = 40;
+    keyLight.shadow.camera.left = -16;
+    keyLight.shadow.camera.right = 16;
+    keyLight.shadow.camera.top = 16;
+    keyLight.shadow.camera.bottom = -16;
+    scene.add(keyLight);
 
-  const keyLight = new THREE.DirectionalLight(0xfff7e3, 0.9);
-  keyLight.position.set(8, 18, 6);
-  keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(2048, 2048);
-  keyLight.shadow.camera.near = 5;
-  keyLight.shadow.camera.far = 40;
-  keyLight.shadow.camera.left = -16;
-  keyLight.shadow.camera.right = 16;
-  keyLight.shadow.camera.top = 16;
-  keyLight.shadow.camera.bottom = -16;
-  scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x9ad9ff, 0.25);
+    rimLight.position.set(-10, 10, -14);
+    scene.add(rimLight);
 
-  const rimLight = new THREE.DirectionalLight(0x9ad9ff, 0.25);
-  rimLight.position.set(-10, 10, -14);
-  scene.add(rimLight);
+    // Subtle table "glow" under board
+    const tableGlow = new THREE.SpotLight(0x263a5f, 0.6, 40, Math.PI / 4, 1, 1.2);
+    tableGlow.position.set(0, 20, 0);
+    tableGlow.target.position.set(0, 0, 0);
+    scene.add(tableGlow);
+    scene.add(tableGlow.target);
 
-  // Subtle table "glow" under board
-  const tableGlow = new THREE.SpotLight(0x263a5f, 0.6, 40, Math.PI / 4, 1, 1.2);
-  tableGlow.position.set(0, 20, 0);
-  tableGlow.target.position.set(0, 0, 0);
-  scene.add(tableGlow);
-  scene.add(tableGlow.target);
-
-  // ----- Physics world -----
-  const world = new CANNON.World({
-    gravity: new CANNON.Vec3(0, -20, 0)
-  });
-  world.broadphase = new CANNON.SAPBroadphase(world);
-  world.allowSleep = true;
-
-  const defaultMaterial = new CANNON.Material('default');
-  const feltMaterial = new CANNON.Material('felt');
-  const borderMaterial = new CANNON.Material('border');
-  
-  // Contact materials
-  const defaultContactMaterial = new CANNON.ContactMaterial(defaultMaterial, defaultMaterial, {
-    friction: 0.0,
-    restitution: 0.18
-  });
-  
-  const feltContactMaterial = new CANNON.ContactMaterial(feltMaterial, defaultMaterial, {
-    friction: 0.6,  // Higher friction for dice on felt
-    restitution: 0.15
-  });
-  
-  const borderContactMaterial = new CANNON.ContactMaterial(borderMaterial, defaultMaterial, {
-    friction: 0.0,  // No friction for dice on borders
-    restitution: 0.25  // Slightly higher bounce
-  });
-  
-  world.addContactMaterial(defaultContactMaterial);
-  world.addContactMaterial(feltContactMaterial);
-  world.addContactMaterial(borderContactMaterial);
-  world.defaultContactMaterial = defaultContactMaterial;
-
-  // ----- Board + dice area -----
-  const boardWidth = 18;
-  const boardDepth = 12;
-  const boardThickness = 0.6;
-  const borderHeight = 1.5;
-  const borderThickness = 0.7;
-
-  // Wooden base
-  const boardGeom = new THREE.BoxGeometry(boardWidth, boardThickness, boardDepth);
-  const woodColor = new THREE.Color(0x5c3b22);
-  const boardMat = new THREE.MeshStandardMaterial({
-    color: woodColor,
-    roughness: 0.65,
-    metalness: 0.05,
-    envMapIntensity: 0.5
-  });
-  const boardMesh = new THREE.Mesh(boardGeom, boardMat);
-  boardMesh.position.set(0, boardThickness / 2, 0);
-  boardMesh.receiveShadow = true;
-  scene.add(boardMesh);
-
-  // Felt area (slightly inset, green, very soft)
-  const feltInset = 0.5;
-  const feltGeom = new THREE.BoxGeometry(boardWidth - feltInset * 2, 0.02, boardDepth - feltInset * 2);
-  const feltMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x0c5e26),
-    roughness: 0.95,
-    metalness: 0.0,
-    emissive: new THREE.Color(0x043313),
-    emissiveIntensity: 0.2
-  });
-  const feltMesh = new THREE.Mesh(feltGeom, feltMat);
-  feltMesh.position.set(0, boardThickness + 0.01, 0);
-  feltMesh.receiveShadow = true;
-  scene.add(feltMesh);
-
-  // Wooden borders
-  const borderMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x704529),
-    roughness: 0.6,
-    metalness: 0.05
-  });
-
-  function addBorder(x, z, sx, sy, sz) {
-    const geom = new THREE.BoxGeometry(sx, sy, sz);
-    const mesh = new THREE.Mesh(geom, borderMat);
-    mesh.position.set(x, sy / 2 + boardThickness, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    scene.add(mesh);
-    return mesh;
-  }
-
-  const borderTop    = addBorder(0, -boardDepth / 2 + borderThickness / 2, boardWidth, borderHeight, borderThickness);
-  const borderBottom = addBorder(0,  boardDepth / 2 - borderThickness / 2, boardWidth, borderHeight, borderThickness);
-  const borderLeft   = addBorder(-boardWidth / 2 + borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
-  const borderRight  = addBorder( boardWidth / 2 - borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
-
-  // Physics: board + borders
-  const groundShape = new CANNON.Box(new CANNON.Vec3(boardWidth / 2, 0.1, boardDepth / 2));
-  const groundBody = new CANNON.Body({ mass: 0, material: feltMaterial });  // Use felt material for ground
-  groundBody.addShape(groundShape);
-  groundBody.position.set(0, boardThickness, 0);
-  world.addBody(groundBody);
-
-  function addBorderBody(x, y, z, sx, sy, sz) {
-    const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
-    const body = new CANNON.Body({ mass: 0, material: borderMaterial });  // Use border material for borders
-    body.addShape(shape);
-    body.position.set(x, y, z);
-    world.addBody(body);
-  }
-
-  // Physics borders are made much taller than the visible rails so a die can only
-  // ever hit the *vertical side* — never land and rest on the flat top face.
-  // Visual rail top  = boardThickness + borderHeight           = 2.1
-  // Physics wall top = boardThickness + physBorderHeight       ≈ 9.1
-  // Max die apex     ≈ 6.1  →  always below physics wall top  ✓
-  const physBorderHeight   = borderHeight + 7.5;               // 9.0 units tall
-  const physBorderCenterY  = boardThickness + physBorderHeight / 2; // 5.1
-
-  const borderInset = 0.8;
-  addBorderBody(borderTop.position.x,    physBorderCenterY, borderTop.position.z + borderInset,    boardWidth - borderInset * 2, physBorderHeight, borderThickness);
-  addBorderBody(borderBottom.position.x, physBorderCenterY, borderBottom.position.z - borderInset, boardWidth - borderInset * 2, physBorderHeight, borderThickness);
-  addBorderBody(borderLeft.position.x + borderInset,  physBorderCenterY, borderLeft.position.z,  borderThickness, physBorderHeight, boardDepth - borderInset * 2);
-  addBorderBody(borderRight.position.x - borderInset, physBorderCenterY, borderRight.position.z, borderThickness, physBorderHeight, boardDepth - borderInset * 2);
-
-  // ----- Invisible safety walls (tall enough to contain dice during a throw) -----
-  const safetyBoxHeight = 9.0;  // Tall enough for any realistic throw arc
-  const safetyBoxY = boardThickness + safetyBoxHeight / 2;  // Centered above board
-  
-  // Create invisible walls around the entire play area
-  function addSafetyWall(x, y, z, sx, sy, sz) {
-    const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
-    const body = new CANNON.Body({ 
-      mass: 0, 
-      material: borderMaterial,  // Use border material (no friction, slightly bouncy)
-      collisionFilterGroup: 1,   // Optional: set collision group
-      collisionFilterMask: 1     // Optional: set collision mask
+    // ----- Physics world -----
+    const world = new CANNON.World({
+      gravity: new CANNON.Vec3(0, -20, 0)
     });
-    body.addShape(shape);
-    body.position.set(x, y, z);
-    world.addBody(body);
-  }
-  
-  // Calculate exact positions for walls
-  // The walls should be positioned at the OUTER edge of the visible borders
-  const wallThickness = 0.2;  // Thicker walls for better collision
-  
-  // Top wall (north) - positioned at the outer edge of the top border
-  const topWallZ = -boardDepth / 2 - borderThickness / 2 - wallThickness / 2;
-  addSafetyWall(
-    0, 
-    safetyBoxY, 
-    topWallZ, 
-    boardWidth + wallThickness * 2,  // Extend width slightly
-    safetyBoxHeight, 
-    wallThickness
-  );
-  
-  // Bottom wall (south)
-  const bottomWallZ = boardDepth / 2 + borderThickness / 2 + wallThickness / 2;
-  addSafetyWall(
-    0, 
-    safetyBoxY, 
-    bottomWallZ, 
-    boardWidth + wallThickness * 2,  // Extend width slightly
-    safetyBoxHeight, 
-    wallThickness
-  );
-  
-  // Left wall (west)
-  const leftWallX = -boardWidth / 2 - borderThickness / 2 - wallThickness / 2;
-  addSafetyWall(
-    leftWallX, 
-    safetyBoxY, 
-    0, 
-    wallThickness, 
-    safetyBoxHeight, 
-    boardDepth + borderThickness + wallThickness  // Extend depth
-  );
-  
-  // Right wall (east)
-  const rightWallX = boardWidth / 2 + borderThickness / 2 + wallThickness / 2;
-  addSafetyWall(
-    rightWallX, 
-    safetyBoxY, 
-    0, 
-    wallThickness, 
-    safetyBoxHeight, 
-    boardDepth + borderThickness + wallThickness  // Extend depth
-  );
-  
-  // No ceiling — gravity naturally brings dice back down.
-  // The tall safety walls above are sufficient to contain any realistic throw.
+    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.allowSleep = true;
 
-  // ----- Tiles (1–9) -----
-  const tiles = [];
-  const tileWidth = 1.4;
-  const tileHeight = 2.4;
-  const tileDepth = 0.3;
-  const tileGap = 0.2;
-  // Position tiles sitting on top of the top border
-  const tileBaseZ = borderTop.position.z;
+    const defaultMaterial = new CANNON.Material('default');
+    const feltMaterial = new CANNON.Material('felt');
+    const borderMaterial = new CANNON.Material('border');
 
-  const tileWoodColor = new THREE.Color(0x9f6f3f);
+    // Contact materials
+    const defaultContactMaterial = new CANNON.ContactMaterial(defaultMaterial, defaultMaterial, {
+      friction: 0.0,
+      restitution: 0.18
+    });
 
-  const tileMatClosed = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x3a2515),
-    roughness: 0.65,
-    metalness: 0.04
-  });
+    const feltContactMaterial = new CANNON.ContactMaterial(feltMaterial, defaultMaterial, {
+      friction: 0.6,  // Higher friction for dice on felt
+      restitution: 0.15
+    });
 
-  const tileGeometry = new RoundedBoxGeometry(
-    tileWidth,
-    tileHeight,
-    tileDepth,
-    4,                      // segments
-    Math.min(tileWidth, tileDepth) * 0.22 // corner radius
-  );
+    const borderContactMaterial = new CANNON.ContactMaterial(borderMaterial, defaultMaterial, {
+      friction: 0.0,  // No friction for dice on borders
+      restitution: 0.25  // Slightly higher bounce
+    });
 
-  // Reusable text canvas texture generator
-  function createNumberTexture(num) {
-    const size = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    world.addContactMaterial(defaultContactMaterial);
+    world.addContactMaterial(feltContactMaterial);
+    world.addContactMaterial(borderContactMaterial);
+    world.defaultContactMaterial = defaultContactMaterial;
 
-    // Background transparent so material color shows; draw subtle vignette
-    ctx.clearRect(0, 0, size, size);
+    // ----- Board + dice area -----
+    const boardWidth = 18;
+    const boardDepth = 12;
+    const boardThickness = 0.6;
+    const borderHeight = 1.5;
+    const borderThickness = 0.7;
 
-    const center = size / 2;
-    const radius = size * 0.45;
-    const grad = ctx.createRadialGradient(center, center * 0.6, radius * 0.1, center, center, radius);
-    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.45)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(center, center, radius, 0, Math.PI * 2);
-    ctx.fill();
+    // Wooden base
+    const boardGeom = new THREE.BoxGeometry(boardWidth, boardThickness, boardDepth);
+    const woodColor = new THREE.Color(0x5c3b22);
+    const boardMat = new THREE.MeshStandardMaterial({
+      color: woodColor,
+      roughness: 0.65,
+      metalness: 0.05,
+      envMapIntensity: 0.5
+    });
+    const boardMesh = new THREE.Mesh(boardGeom, boardMat);
+    boardMesh.position.set(0, boardThickness / 2, 0);
+    boardMesh.receiveShadow = true;
+    scene.add(boardMesh);
 
-    // Number
-    ctx.font = 'bold 150px system-ui';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#f7f2e8';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 16;
-    ctx.fillText(num.toString(), center, center * 1.06);
+    // Felt area (slightly inset, green, very soft)
+    const feltInset = 0.5;
+    const feltGeom = new THREE.BoxGeometry(boardWidth - feltInset * 2, 0.02, boardDepth - feltInset * 2);
+    const feltMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0x0c5e26),
+      roughness: 0.95,
+      metalness: 0.0,
+      emissive: new THREE.Color(0x043313),
+      emissiveIntensity: 0.2
+    });
+    const feltMesh = new THREE.Mesh(feltGeom, feltMat);
+    feltMesh.position.set(0, boardThickness + 0.01, 0);
+    feltMesh.receiveShadow = true;
+    scene.add(feltMesh);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
-  }
+    // Wooden borders
+    const borderMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0x704529),
+      roughness: 0.6,
+      metalness: 0.05
+    });
 
-  const numberTextures = {};
-
-  function getNumberTexture(num) {
-    if (!numberTextures[num]) {
-      numberTextures[num] = createNumberTexture(num);
+    function addBorder(x, z, sx, sy, sz) {
+      const geom = new THREE.BoxGeometry(sx, sy, sz);
+      const mesh = new THREE.Mesh(geom, borderMat);
+      mesh.position.set(x, sy / 2 + boardThickness, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
     }
-    return numberTextures[num];
-  }
 
-  const tileCanvasMatCache = {};
+    const borderTop = addBorder(0, -boardDepth / 2 + borderThickness / 2, boardWidth, borderHeight, borderThickness);
+    const borderBottom = addBorder(0, boardDepth / 2 - borderThickness / 2, boardWidth, borderHeight, borderThickness);
+    const borderLeft = addBorder(-boardWidth / 2 + borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
+    const borderRight = addBorder(boardWidth / 2 - borderThickness / 2, 0, borderThickness, borderHeight, boardDepth);
 
-  // Small green dot used to indicate highlight in the top-right corner
-  const tileHighlightDotGeo = new THREE.SphereGeometry(0.09, 12, 12);
-  const tileHighlightDotMat = new THREE.MeshBasicMaterial({ color: 0x2bff7a });
+    // Physics: board + borders
+    const groundShape = new CANNON.Box(new CANNON.Vec3(boardWidth / 2, 0.1, boardDepth / 2));
+    const groundBody = new CANNON.Body({ mass: 0, material: feltMaterial });  // Use felt material for ground
+    groundBody.addShape(groundShape);
+    groundBody.position.set(0, boardThickness, 0);
+    world.addBody(groundBody);
 
-  function createTileMaterial(num) {
-    if (!tileCanvasMatCache[num]) {
-      tileCanvasMatCache[num] = new THREE.MeshStandardMaterial({
-        color: tileWoodColor,
-        roughness: 0.5,
-        metalness: 0.1,
-        map: getNumberTexture(num),
-        emissive: new THREE.Color(0x000000),
-        emissiveIntensity: 0.0
+    function addBorderBody(x, y, z, sx, sy, sz) {
+      const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
+      const body = new CANNON.Body({ mass: 0, material: borderMaterial });  // Use border material for borders
+      body.addShape(shape);
+      body.position.set(x, y, z);
+      world.addBody(body);
+    }
+
+    // Physics borders are made much taller than the visible rails so a die can only
+    // ever hit the *vertical side* — never land and rest on the flat top face.
+    // Visual rail top  = boardThickness + borderHeight           = 2.1
+    // Physics wall top = boardThickness + physBorderHeight       ≈ 9.1
+    // Max die apex     ≈ 6.1  →  always below physics wall top  ✓
+    const physBorderHeight = borderHeight + 7.5;               // 9.0 units tall
+    const physBorderCenterY = boardThickness + physBorderHeight / 2; // 5.1
+
+    const borderInset = 0.8;
+    addBorderBody(borderTop.position.x, physBorderCenterY, borderTop.position.z + borderInset, boardWidth - borderInset * 2, physBorderHeight, borderThickness);
+    addBorderBody(borderBottom.position.x, physBorderCenterY, borderBottom.position.z - borderInset, boardWidth - borderInset * 2, physBorderHeight, borderThickness);
+    addBorderBody(borderLeft.position.x + borderInset, physBorderCenterY, borderLeft.position.z, borderThickness, physBorderHeight, boardDepth - borderInset * 2);
+    addBorderBody(borderRight.position.x - borderInset, physBorderCenterY, borderRight.position.z, borderThickness, physBorderHeight, boardDepth - borderInset * 2);
+
+    // ----- Invisible safety walls (tall enough to contain dice during a throw) -----
+    const safetyBoxHeight = 9.0;  // Tall enough for any realistic throw arc
+    const safetyBoxY = boardThickness + safetyBoxHeight / 2;  // Centered above board
+
+    // Create invisible walls around the entire play area
+    function addSafetyWall(x, y, z, sx, sy, sz) {
+      const shape = new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2));
+      const body = new CANNON.Body({
+        mass: 0,
+        material: borderMaterial,  // Use border material (no friction, slightly bouncy)
+        collisionFilterGroup: 1,   // Optional: set collision group
+        collisionFilterMask: 1     // Optional: set collision mask
       });
+      body.addShape(shape);
+      body.position.set(x, y, z);
+      world.addBody(body);
     }
-    return tileCanvasMatCache[num].clone();
-  }
 
-  const tileRaycastMeshes = [];
+    // Calculate exact positions for walls
+    // The walls should be positioned at the OUTER edge of the visible borders
+    const wallThickness = 0.2;  // Thicker walls for better collision
 
-  for (let i = 1; i <= 9; i++) {
-    const x = (i - 5) * (tileWidth + tileGap);
-
-    // Hinge pivot at the bottom of the tile, sitting on the top border
-    const pivot = new THREE.Object3D();
-    pivot.position.set(x, boardThickness + borderHeight + 0.01, tileBaseZ);
-    scene.add(pivot);
-
-    const mat = createTileMaterial(i);
-    const mesh = new THREE.Mesh(tileGeometry, mat);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    // Local position so the bottom of the tile is at the pivot
-    mesh.position.set(0, tileHeight / 2, 0);
-    // Slight backward tilt
-    pivot.rotation.x = -Math.PI * 0.06;
-    pivot.add(mesh);
-
-    // Add a small green dot in the top-right front corner (local space)
-    const dot = new THREE.Mesh(tileHighlightDotGeo, tileHighlightDotMat);
-    dot.position.set(
-      tileWidth / 2 - 0.15,
-      tileHeight / 2 - 0.15,
-      tileDepth / 2 + 0.02
+    // Top wall (north) - positioned at the outer edge of the top border
+    const topWallZ = -boardDepth / 2 - borderThickness / 2 - wallThickness / 2;
+    addSafetyWall(
+      0,
+      safetyBoxY,
+      topWallZ,
+      boardWidth + wallThickness * 2,  // Extend width slightly
+      safetyBoxHeight,
+      wallThickness
     );
-    dot.visible = false;
-    mesh.add(dot);
 
-    // Store per-tile extra info
-    const tile = {
-      number: i,
-      mesh,
-      pivot,
-      highlightDot: dot,
-      state: 'open', // 'open', 'highlight', 'closed'
-      isSelected: false
-    };
-    tiles.push(tile);
-    tileRaycastMeshes.push(mesh);
+    // Bottom wall (south)
+    const bottomWallZ = boardDepth / 2 + borderThickness / 2 + wallThickness / 2;
+    addSafetyWall(
+      0,
+      safetyBoxY,
+      bottomWallZ,
+      boardWidth + wallThickness * 2,  // Extend width slightly
+      safetyBoxHeight,
+      wallThickness
+    );
 
-    // Black "hinge" at bottom
-    const hingeGeo = new THREE.BoxGeometry(tileWidth * 0.95, 0.08, tileDepth * 1.6);
-    const hingeMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.8,
-      metalness: 0.2
+    // Left wall (west)
+    const leftWallX = -boardWidth / 2 - borderThickness / 2 - wallThickness / 2;
+    addSafetyWall(
+      leftWallX,
+      safetyBoxY,
+      0,
+      wallThickness,
+      safetyBoxHeight,
+      boardDepth + borderThickness + wallThickness  // Extend depth
+    );
+
+    // Right wall (east)
+    const rightWallX = boardWidth / 2 + borderThickness / 2 + wallThickness / 2;
+    addSafetyWall(
+      rightWallX,
+      safetyBoxY,
+      0,
+      wallThickness,
+      safetyBoxHeight,
+      boardDepth + borderThickness + wallThickness  // Extend depth
+    );
+
+    // No ceiling — gravity naturally brings dice back down.
+    // The tall safety walls above are sufficient to contain any realistic throw.
+
+    // ----- Tiles (1–9) -----
+    const tiles = [];
+    const tileWidth = 1.4;
+    const tileHeight = 2.4;
+    const tileDepth = 0.3;
+    const tileGap = 0.2;
+    // Position tiles sitting on top of the top border
+    const tileBaseZ = borderTop.position.z;
+
+    const tileWoodColor = new THREE.Color(0x9f6f3f);
+
+    const tileMatClosed = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0x3a2515),
+      roughness: 0.65,
+      metalness: 0.04
     });
-    const hinge = new THREE.Mesh(hingeGeo, hingeMat);
-    hinge.position.set(x, boardThickness + borderHeight + 0.05, tileBaseZ + tileDepth * 0.2);
-    hinge.receiveShadow = true;
-    scene.add(hinge);
-  }
 
-  function updateOpenSumDisplay() {
-    const openSum = tiles
-      .filter(t => t.state !== 'closed')
-      .reduce((s, t) => s + t.number, 0);
-    openSumValueEl.textContent = openSum.toString();
-  }
+    const tileGeometry = new RoundedBoxGeometry(
+      tileWidth,
+      tileHeight,
+      tileDepth,
+      4,                      // segments
+      Math.min(tileWidth, tileDepth) * 0.22 // corner radius
+    );
 
-  updateOpenSumDisplay();
+    // Reusable text canvas texture generator
+    function createNumberTexture(num) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
 
-  // ----- Dice -----
-  const dice = [];
-  const diceSize = 1.0;
+      // Background transparent so material color shows; draw subtle vignette
+      ctx.clearRect(0, 0, size, size);
 
-  const diceGeometry = new RoundedBoxGeometry(
-    diceSize,
-    diceSize,
-    diceSize,
-    6,                // segments for smoother edges
-    diceSize * 0.18   // corner radius
-  );
-  const diceBaseMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0xf0e8df),
-    roughness: 0.4,
-    metalness: 0.1
-  });
-
-  // Generate simple pip textures on the six faces
-  const pipTextures = {};
-  function createPipTexture(value) {
-    const size = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f4eee6';
-    ctx.fillRect(0, 0, size, size);
-
-    const grad = ctx.createRadialGradient(size * 0.3, size * 0.2, 10, size * 0.5, size * 0.6, size * 0.9);
-    grad.addColorStop(0, 'rgba(255,255,255,0.7)');
-    grad.addColorStop(1, 'rgba(210,190,170,0.9)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-
-    const pipRadius = size * 0.095;
-    const positions = [
-      [0.25, 0.25],
-      [0.75, 0.75],
-      [0.25, 0.75],
-      [0.75, 0.25],
-      [0.25, 0.5],
-      [0.75, 0.5],
-      [0.5, 0.5],
-    ];
-
-    ctx.fillStyle = '#1e1a1a';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 8;
-
-    function drawPip(ix, iy) {
-      const x = ix * size;
-      const y = iy * size;
+      const center = size / 2;
+      const radius = size * 0.45;
+      const grad = ctx.createRadialGradient(center, center * 0.6, radius * 0.1, center, center, radius);
+      grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.45)');
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x, y, pipRadius, 0, Math.PI * 2);
+      ctx.arc(center, center, radius, 0, Math.PI * 2);
       ctx.fill();
+
+      // Number
+      ctx.font = 'bold 150px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f7f2e8';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 16;
+      ctx.fillText(num.toString(), center, center * 1.06);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
     }
 
-    switch (value) {
-      case 1:
-        drawPip(positions[6][0], positions[6][1]);
-        break;
-      case 2:
-        drawPip(positions[0][0], positions[0][1]);
-        drawPip(positions[1][0], positions[1][1]);
-        break;
-      case 3:
-        drawPip(positions[0][0], positions[0][1]);
-        drawPip(positions[6][0], positions[6][1]);
-        drawPip(positions[1][0], positions[1][1]);
-        break;
-      case 4:
-        drawPip(positions[0][0], positions[0][1]);
-        drawPip(positions[1][0], positions[1][1]);
-        drawPip(positions[2][0], positions[2][1]);
-        drawPip(positions[3][0], positions[3][1]);
-        break;
-      case 5:
-        drawPip(positions[0][0], positions[0][1]);
-        drawPip(positions[1][0], positions[1][1]);
-        drawPip(positions[2][0], positions[2][1]);
-        drawPip(positions[3][0], positions[3][1]);
-        drawPip(positions[6][0], positions[6][1]);
-        break;
-      case 6:
-        drawPip(positions[0][0], positions[0][1]);
-        drawPip(positions[1][0], positions[1][1]);
-        drawPip(positions[2][0], positions[2][1]);
-        drawPip(positions[3][0], positions[3][1]);
-        drawPip(positions[4][0], positions[4][1]);
-        drawPip(positions[5][0], positions[5][1]);
-        break;
+    const numberTextures = {};
+
+    function getNumberTexture(num) {
+      if (!numberTextures[num]) {
+        numberTextures[num] = createNumberTexture(num);
+      }
+      return numberTextures[num];
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
-  }
+    const tileCanvasMatCache = {};
 
-  function getPipTexture(value) {
-    if (!pipTextures[value]) {
-      pipTextures[value] = createPipTexture(value);
+    // Small green dot used to indicate highlight in the top-right corner
+    const tileHighlightDotGeo = new THREE.SphereGeometry(0.09, 12, 12);
+    const tileHighlightDotMat = new THREE.MeshBasicMaterial({ color: 0x2bff7a });
+
+    function createTileMaterial(num) {
+      if (!tileCanvasMatCache[num]) {
+        tileCanvasMatCache[num] = new THREE.MeshStandardMaterial({
+          color: tileWoodColor,
+          roughness: 0.5,
+          metalness: 0.1,
+          map: getNumberTexture(num),
+          emissive: new THREE.Color(0x000000),
+          emissiveIntensity: 0.0
+        });
+      }
+      return tileCanvasMatCache[num].clone();
     }
-    return pipTextures[value];
-  }
 
-  // We'll map faces so that:
-  // +Y -> 1, -Y -> 6, +X -> 3, -X -> 4, +Z -> 2, -Z -> 5
-const diceMaterials = [
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(3) }), // +X
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(4) }), // -X
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(1) }), // +Y
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(6) }), // -Y
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(2) }), // +Z
-  new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(5) }), // -Z
-];
-  function createDie(startPos) {
-    const mesh = new THREE.Mesh(diceGeometry, diceMaterials);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    scene.add(mesh);
+    const tileRaycastMeshes = [];
 
-    const shape = new CANNON.Box(new CANNON.Vec3(diceSize / 2, diceSize / 2, diceSize / 2));
-    const body = new CANNON.Body({
-      mass: 1,
-      shape,
-      material: defaultMaterial,
-      sleepTimeLimit: 0.6,
-      sleepSpeedLimit: 0.05
+    for (let i = 1; i <= 9; i++) {
+      const x = (i - 5) * (tileWidth + tileGap);
+
+      // Hinge pivot at the bottom of the tile, sitting on the top border
+      const pivot = new THREE.Object3D();
+      pivot.position.set(x, boardThickness + borderHeight + 0.01, tileBaseZ);
+      scene.add(pivot);
+
+      const mat = createTileMaterial(i);
+      const mesh = new THREE.Mesh(tileGeometry, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      // Local position so the bottom of the tile is at the pivot
+      mesh.position.set(0, tileHeight / 2, 0);
+      // Slight backward tilt
+      pivot.rotation.x = -Math.PI * 0.06;
+      pivot.add(mesh);
+
+      // Add a small green dot in the top-right front corner (local space)
+      const dot = new THREE.Mesh(tileHighlightDotGeo, tileHighlightDotMat);
+      dot.position.set(
+        tileWidth / 2 - 0.15,
+        tileHeight / 2 - 0.15,
+        tileDepth / 2 + 0.02
+      );
+      dot.visible = false;
+      mesh.add(dot);
+
+      // Store per-tile extra info
+      const tile = {
+        number: i,
+        mesh,
+        pivot,
+        highlightDot: dot,
+        state: 'open', // 'open', 'highlight', 'closed'
+        isSelected: false
+      };
+      tiles.push(tile);
+      tileRaycastMeshes.push(mesh);
+
+      // Black "hinge" at bottom
+      const hingeGeo = new THREE.BoxGeometry(tileWidth * 0.95, 0.08, tileDepth * 1.6);
+      const hingeMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      const hinge = new THREE.Mesh(hingeGeo, hingeMat);
+      hinge.position.set(x, boardThickness + borderHeight + 0.05, tileBaseZ + tileDepth * 0.2);
+      hinge.receiveShadow = true;
+      scene.add(hinge);
+    }
+
+    function updateOpenSumDisplay() {
+      const openSum = tiles
+        .filter(t => t.state !== 'closed')
+        .reduce((s, t) => s + t.number, 0);
+      openSumValueEl.textContent = openSum.toString();
+    }
+
+    updateOpenSumDisplay();
+
+    // ----- Dice -----
+    const dice = [];
+    const diceSize = 1.0;
+
+    const diceGeometry = new RoundedBoxGeometry(
+      diceSize,
+      diceSize,
+      diceSize,
+      6,                // segments for smoother edges
+      diceSize * 0.18   // corner radius
+    );
+    const diceBaseMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0xf0e8df),
+      roughness: 0.4,
+      metalness: 0.1
     });
-    body.position.set(startPos.x, startPos.y, startPos.z);
-    world.addBody(body);
 
-    // Sound on collision — fires via cannon-es collision event.
-    // Branches on whether the other body is a die or a surface.
-    let lastClackTime = -1;
-    body.addEventListener('collide', (e) => {
-      if (!audioCtx) return;                          // silent before first roll
-      const now = audioCtx.currentTime;
-      const v = Math.abs(e.contact.getImpactVelocityAlongNormal());
-      if (v < 1.0) return;                            // ignore gentle rolling contact
+    // Generate simple pip textures on the six faces
+    const pipTextures = {};
+    function createPipTexture(value) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f4eee6';
+      ctx.fillRect(0, 0, size, size);
 
-      const isDieDie = dice.some(d => d.body === e.body);
-      if (isDieDie) {
-        // Shared cooldown — both bodies fire this event, only play once
-        if (now - lastDieDieSoundTime < 0.12) return;
-        lastDieDieSoundTime = now;
-        const gain = Math.min(0.44, v * 0.030);
-        try { playDiceDieHit(audioCtx, now, gain); } catch (_) {}
-      } else {
-        if (now - lastClackTime < 0.10) return;       // 100 ms cooldown per die
-        lastClackTime = now;
-        const gain = Math.min(0.38, v * 0.024);
-        try { playDiceClack(audioCtx, now, gain); } catch (_) {}
-      }
-    });
+      const grad = ctx.createRadialGradient(size * 0.3, size * 0.2, 10, size * 0.5, size * 0.6, size * 0.9);
+      grad.addColorStop(0, 'rgba(255,255,255,0.7)');
+      grad.addColorStop(1, 'rgba(210,190,170,0.9)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
 
-    return { mesh, body, snapAnim: null, nudgeCount: 0 };
-  }
-
-  // Ground body top = boardThickness + 0.1 = 0.7; die rests with center at 0.7 + 0.5 = 1.2
-  const dieRestY = boardThickness + 0.1 + diceSize / 2 + 0.02;  // 1.22 — just above board
-  // Place starting dice near the centre-right of the felt, ready for the first roll
-  dice.push(createDie(new THREE.Vector3( 2.8, dieRestY,  0.5)));
-  dice.push(createDie(new THREE.Vector3( 1.3, dieRestY, -0.5)));
-
-  function syncDiceMeshes() {
-    for (const d of dice) {
-      d.mesh.position.copy(d.body.position);
-      if (d.snapAnim) {
-        d.snapAnim.frame++;
-        const t = Math.min(1, d.snapAnim.frame / d.snapAnim.totalFrames);
-        d.mesh.quaternion.slerpQuaternions(d.snapAnim.from, d.snapAnim.to, t);
-        if (t >= 1) d.snapAnim = null;
-      } else {
-        d.mesh.quaternion.copy(d.body.quaternion);
-      }
-    }
-  }
-
-  // Compute die value from orientation
-  const faceNormals = [
-    { normal: new CANNON.Vec3( 1, 0, 0), value: 3 },
-    { normal: new CANNON.Vec3(-1, 0, 0), value: 4 },
-    { normal: new CANNON.Vec3( 0, 1, 0), value: 1 },
-    { normal: new CANNON.Vec3( 0,-1, 0), value: 6 },
-    { normal: new CANNON.Vec3( 0, 0, 1), value: 2 },
-    { normal: new CANNON.Vec3( 0, 0,-1), value: 5 },
-  ];
-  const worldUp = new CANNON.Vec3(0, 1, 0);
-  const temp = new CANNON.Vec3();
-
-  function getDieValue(die) {
-    let bestValue = 1;
-    let bestDot = -Infinity;
-    for (const face of faceNormals) {
-      die.body.quaternion.vmult(face.normal, temp);
-      const dot = temp.dot(worldUp);
-      if (dot > bestDot) {
-        bestDot = dot;
-        bestValue = face.value;
-      }
-    }
-    return bestValue;
-  }
-
-  function isDieFlat(die) {
-    let bestDot = -Infinity;
-    for (const face of faceNormals) {
-      die.body.quaternion.vmult(face.normal, temp);
-      const dot = temp.dot(worldUp);
-      if (dot > bestDot) bestDot = dot;
-    }
-    return bestDot > 0.85; // face must be within ~32° of horizontal
-  }
-
-  // Rotate the die's quaternion so its nearest face points exactly straight up.
-  // Snaps the physics body immediately (for correct value reading) and starts a
-  // smooth mesh animation so the correction doesn't look like a jarring teleport.
-  function snapDieFlat(die) {
-    let bestNormal = new CANNON.Vec3();
-    let bestDot = -Infinity;
-    const tmpN = new CANNON.Vec3();
-    for (const face of faceNormals) {
-      die.body.quaternion.vmult(face.normal, tmpN);
-      const dot = tmpN.dot(worldUp);
-      if (dot > bestDot) {
-        bestDot = dot;
-        bestNormal.set(tmpN.x, tmpN.y, tmpN.z);
-      }
-    }
-    if (bestDot > 0.999) return; // already flat
-
-    const axis = new CANNON.Vec3();
-    bestNormal.cross(worldUp, axis);
-    const axisLen = axis.length();
-    if (axisLen < 1e-6) return;
-
-    axis.scale(1 / axisLen, axis);
-    const angle = Math.acos(Math.max(-1, Math.min(1, bestDot)));
-    const correction = new CANNON.Quaternion();
-    correction.setFromAxisAngle(axis, angle);
-    const snapped = correction.mult(die.body.quaternion);
-
-    // Snap physics body immediately so value reading is correct
-    die.body.quaternion.set(snapped.x, snapped.y, snapped.z, snapped.w);
-    die.body.velocity.setZero();
-    die.body.angularVelocity.setZero();
-
-    // Animate the mesh from its current visual orientation to the snapped target
-    die.snapAnim = {
-      from: die.mesh.quaternion.clone(),
-      to: new THREE.Quaternion(snapped.x, snapped.y, snapped.z, snapped.w),
-      frame: 0,
-      totalFrames: 18,
-    };
-  }
-
-  // ----- Game logic -----
-  let canRoll = true;
-  let diceSettled = true;   // true = not waiting for a roll; set false by rollDice()
-  let settledFrames = 0;
-  let targetRollValue = null;
-  let validTileNumbers = new Set();
-  let gameOver = false;
-  let confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
-  let confettiPieces = [];
-  let confettiAnimId = null;
-
-  // ----- Audio -----
-  let audioCtx = null;
-  let lastDieDieSoundTime = -1;   // shared across both dice so they don't double-fire
-
-  function getAudioCtx() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    return audioCtx;
-  }
-
-  // Schedule a single oscillator with optional frequency ramp and attack.
-  function scheduleOsc(ctx, { type = 'sine', freq, freqEnd = null, freqRampDur = 0, gain, decayDur, when, attack = 0 }) {
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, when);
-    if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, when + freqRampDur);
-    const g = ctx.createGain();
-    if (attack > 0) {
-      g.gain.setValueAtTime(0.0001, when);
-      g.gain.exponentialRampToValueAtTime(gain, when + attack);
-    } else {
-      g.gain.setValueAtTime(gain, when);
-    }
-    g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
-    osc.connect(g);
-    g.connect(ctx.destination);
-    osc.start(when);
-    osc.stop(when + decayDur + 0.05);
-  }
-
-  // Schedule a filtered white-noise burst with optional filter-frequency sweep and attack.
-  function scheduleNoise(ctx, { filterType, filterFreq, filterFreqEnd = null, filterFreqRampDur = 0, Q = 1, duration, gain, decayDur, when, attack = 0 }) {
-    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    const filter = ctx.createBiquadFilter();
-    filter.type = filterType;
-    filter.frequency.setValueAtTime(filterFreq, when);
-    if (filterFreqEnd !== null) filter.frequency.exponentialRampToValueAtTime(filterFreqEnd, when + filterFreqRampDur);
-    filter.Q.value = Q;
-    const g = ctx.createGain();
-    if (attack > 0) {
-      g.gain.setValueAtTime(0.0001, when);
-      g.gain.exponentialRampToValueAtTime(gain, when + attack);
-    } else {
-      g.gain.setValueAtTime(gain, when);
-    }
-    g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
-    noise.connect(filter);
-    filter.connect(g);
-    g.connect(ctx.destination);
-    noise.start(when);
-    noise.stop(when + duration + 0.02);
-  }
-
-  function playWoodThump(ctx, when, gain) {
-    scheduleOsc(ctx,   { freq: 260, freqEnd: 85,  freqRampDur: 0.055, gain: gain * 0.65, decayDur: 0.075, when });
-    scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 500,  Q: 1.1, duration: 0.06,  gain: gain * 0.38, decayDur: 0.042, when });
-  }
-
-  function playDiceClack(ctx, when, gain) {
-    scheduleOsc(ctx,   { freq: 680, freqEnd: 210, freqRampDur: 0.038, gain: gain * 0.55, decayDur: 0.055, when });
-    scheduleNoise(ctx, { filterType: 'highpass',  filterFreq: 600,          duration: 0.04,  gain: gain * 0.45, decayDur: 0.028, when });
-  }
-
-  function playDiceDieHit(ctx, when, gain) {
-    scheduleOsc(ctx,   { freq: 920, freqEnd: 380, freqRampDur: 0.025, gain: gain * 0.65, decayDur: 0.13,  when });
-    scheduleNoise(ctx, { filterType: 'bandpass',  filterFreq: 1400, Q: 1.8, duration: 0.022, gain: gain * 0.40, decayDur: 0.016, when });
-  }
-
-  function playDiceRattle() {
-    try {
-      const ctx = getAudioCtx();
-      const now = ctx.currentTime;
-      for (let i = 0; i < 5; i++) {
-        const t    = now + i * 0.052 + Math.random() * 0.018;
-        const gain = 0.22 * Math.pow(0.72, i);
-        scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 700 + Math.random() * 500, Q: 2.2, duration: 0.038, gain, decayDur: 0.032, when: t });
-      }
-    } catch (_) { /* silent fallback */ }
-  }
-
-  // Two swept-noise layers: brief high whistle (throw impulse) + longer mid rush (flight).
-  function playDiceWhoosh() {
-    try {
-      const ctx = getAudioCtx();
-      const now = ctx.currentTime;
-      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 2200, filterFreqEnd: 800, filterFreqRampDur: 0.30, Q: 2.0, duration: 0.30, gain: 0.07, decayDur: 0.30, when: now, attack: 0.03 });
-      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq:  900, filterFreqEnd: 320, filterFreqRampDur: 0.65, Q: 1.3, duration: 0.65, gain: 0.09, decayDur: 0.65, when: now, attack: 0.06 });
-    } catch (_) { /* silent fallback */ }
-  }
-
-  // A4 → F4 → D4 → A3↓  sad-trombone figure on game over.
-  function playGameOverSound() {
-    try {
-      const ctx   = getAudioCtx();
-      const start = ctx.currentTime + 0.35;
-      const notes = [
-        { freq: 440, delay: 0.00, dur: 0.38 },
-        { freq: 349, delay: 0.20, dur: 0.38 },
-        { freq: 294, delay: 0.40, dur: 0.38 },
-        { freq: 220, delay: 0.60, dur: 0.95 },
+      const pipRadius = size * 0.095;
+      const positions = [
+        [0.25, 0.25],
+        [0.75, 0.75],
+        [0.25, 0.75],
+        [0.75, 0.25],
+        [0.25, 0.5],
+        [0.75, 0.5],
+        [0.5, 0.5],
       ];
-      notes.forEach(({ freq, delay, dur }, i) => {
-        const isLast = i === notes.length - 1;
-        scheduleOsc(ctx, { type: 'triangle', freq, freqEnd: freq * (isLast ? 0.70 : 0.96), freqRampDur: dur, gain: 0.17, decayDur: dur, when: start + delay, attack: 0.018 });
-      });
-    } catch (_) { /* silent fallback */ }
-  }
 
-  // Ascending bell arpeggio C5–E5–G5–C6 + sustained chord on win.
-  function playWinSound() {
-    try {
-      const ctx      = getAudioCtx();
-      const start    = ctx.currentTime + 0.44;
-      const arpFreqs = [523, 659, 784, 1047];
-      const spacing  = 0.13;
-      const ringOut  = 0.60;
+      ctx.fillStyle = '#1e1a1a';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 8;
 
-      arpFreqs.forEach((freq, i) => {
-        const t = start + i * spacing;
-        scheduleOsc(ctx, { freq,          gain: 0.20, decayDur: ringOut,        when: t, attack: 0.012 });
-        scheduleOsc(ctx, { freq: freq * 2.76, gain: 0.06, decayDur: ringOut * 0.40, when: t, attack: 0.012 });
-      });
+      function drawPip(ix, iy) {
+        const x = ix * size;
+        const y = iy * size;
+        ctx.beginPath();
+        ctx.arc(x, y, pipRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      const chordT     = start + arpFreqs.length * spacing + 0.06;
-      const chordGains = [0.14, 0.10, 0.07, 0.05];
-      arpFreqs.forEach((freq, i) => {
-        scheduleOsc(ctx, { freq, gain: chordGains[i], decayDur: 1.5, when: chordT, attack: 0.025 });
-      });
-    } catch (_) { /* silent fallback */ }
-  }
+      switch (value) {
+        case 1:
+          drawPip(positions[6][0], positions[6][1]);
+          break;
+        case 2:
+          drawPip(positions[0][0], positions[0][1]);
+          drawPip(positions[1][0], positions[1][1]);
+          break;
+        case 3:
+          drawPip(positions[0][0], positions[0][1]);
+          drawPip(positions[6][0], positions[6][1]);
+          drawPip(positions[1][0], positions[1][1]);
+          break;
+        case 4:
+          drawPip(positions[0][0], positions[0][1]);
+          drawPip(positions[1][0], positions[1][1]);
+          drawPip(positions[2][0], positions[2][1]);
+          drawPip(positions[3][0], positions[3][1]);
+          break;
+        case 5:
+          drawPip(positions[0][0], positions[0][1]);
+          drawPip(positions[1][0], positions[1][1]);
+          drawPip(positions[2][0], positions[2][1]);
+          drawPip(positions[3][0], positions[3][1]);
+          drawPip(positions[6][0], positions[6][1]);
+          break;
+        case 6:
+          drawPip(positions[0][0], positions[0][1]);
+          drawPip(positions[1][0], positions[1][1]);
+          drawPip(positions[2][0], positions[2][1]);
+          drawPip(positions[3][0], positions[3][1]);
+          drawPip(positions[4][0], positions[4][1]);
+          drawPip(positions[5][0], positions[5][1]);
+          break;
+      }
 
-  function playTileFlipSound() {
-    try {
-      const ctx = getAudioCtx();
-      const now = ctx.currentTime;
-      playWoodThump(ctx, now + 0.228, 0.28);   // main slam
-      playWoodThump(ctx, now + 0.390, 0.07);   // soft settle
-    } catch (_) { /* audio not supported — silent */ }
-  }
-
-  function resizeConfettiCanvas() {
-    if (!confettiCanvas || !confettiCtx) return;
-    confettiCanvas.width = window.innerWidth;
-    confettiCanvas.height = window.innerHeight;
-  }
-
-  resizeConfettiCanvas();
-
-  function showGameOverOverlay({ perfect, score }) {
-    if (!gameOverOverlay) return;
-    if (perfect) {
-      gameOverTitleEl.textContent = 'Shut The Box!';
-      gameOverSubtitleEl.textContent = 'Beautifully done – every tile is closed.';
-      gameOverScoreEl.textContent = 'Score: 0';
-    } else {
-      gameOverTitleEl.textContent = 'No More Moves';
-      gameOverSubtitleEl.textContent = 'The box stays partially open this round.';
-      gameOverScoreEl.textContent = `Score: ${score}`;
-    }
-    gameOverOverlay.classList.add('visible');
-    if (perfect) {
-      startConfetti();
-      playWinSound();
-    } else {
-      playGameOverSound();
-    }
-  }
-
-  function hideGameOverOverlay() {
-    if (!gameOverOverlay) return;
-    gameOverOverlay.classList.remove('visible');
-    stopConfetti();
-  }
-
-  if (restartButton) {
-    restartButton.addEventListener('click', () => {
-      if (!gameOver) return;
-      startNewGame();
-    });
-  }
-
-  function createConfettiPiece() {
-    const colors = ['#ffd86f', '#f7b733', '#ff7e67', '#7cf29c', '#7ad0ff', '#e97bff'];
-    const size = 4 + Math.random() * 6;
-    return {
-      x: Math.random() * window.innerWidth,
-      y: -20 - Math.random() * 40,
-      vx: -1 + Math.random() * 2,
-      vy: 2 + Math.random() * 3,
-      size,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rotation: Math.random() * Math.PI * 2,
-      rotationSpeed: (-0.1 + Math.random() * 0.2)
-    };
-  }
-
-  function startConfetti() {
-    if (!confettiCtx) return;
-    confettiPieces = [];
-    for (let i = 0; i < 160; i++) {
-      confettiPieces.push(createConfettiPiece());
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
     }
 
-    function loop() {
-      confettiAnimId = requestAnimationFrame(loop);
-      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    function getPipTexture(value) {
+      if (!pipTextures[value]) {
+        pipTextures[value] = createPipTexture(value);
+      }
+      return pipTextures[value];
+    }
 
-      if (Math.random() < 0.3 && confettiPieces.length < 240) {
+    // We'll map faces so that:
+    // +Y -> 1, -Y -> 6, +X -> 3, -X -> 4, +Z -> 2, -Z -> 5
+    const diceMaterials = [
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(3) }), // +X
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(4) }), // -X
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(1) }), // +Y
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(6) }), // -Y
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(2) }), // +Z
+      new THREE.MeshStandardMaterial({ ...diceBaseMat, map: getPipTexture(5) }), // -Z
+    ];
+    function createDie(startPos) {
+      const mesh = new THREE.Mesh(diceGeometry, diceMaterials);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+
+      const shape = new CANNON.Box(new CANNON.Vec3(diceSize / 2, diceSize / 2, diceSize / 2));
+      const body = new CANNON.Body({
+        mass: 1,
+        shape,
+        material: defaultMaterial,
+        sleepTimeLimit: 0.6,
+        sleepSpeedLimit: 0.05
+      });
+      body.position.set(startPos.x, startPos.y, startPos.z);
+      world.addBody(body);
+
+      // Sound on collision — fires via cannon-es collision event.
+      // Branches on whether the other body is a die or a surface.
+      let lastClackTime = -1;
+      body.addEventListener('collide', (e) => {
+        if (!audioCtx) return;                          // silent before first roll
+        const now = audioCtx.currentTime;
+        const v = Math.abs(e.contact.getImpactVelocityAlongNormal());
+        if (v < 1.0) return;                            // ignore gentle rolling contact
+
+        const isDieDie = dice.some(d => d.body === e.body);
+        if (isDieDie) {
+          // Shared cooldown — both bodies fire this event, only play once
+          if (now - lastDieDieSoundTime < 0.12) return;
+          lastDieDieSoundTime = now;
+          const gain = Math.min(0.44, v * 0.030);
+          try { playDiceDieHit(audioCtx, now, gain); } catch (_) { }
+        } else {
+          if (now - lastClackTime < 0.10) return;       // 100 ms cooldown per die
+          lastClackTime = now;
+          const gain = Math.min(0.38, v * 0.024);
+          try { playDiceClack(audioCtx, now, gain); } catch (_) { }
+        }
+      });
+
+      return { mesh, body, snapAnim: null, nudgeCount: 0 };
+    }
+
+    // Ground body top = boardThickness + 0.1 = 0.7; die rests with center at 0.7 + 0.5 = 1.2
+    const dieRestY = boardThickness + 0.1 + diceSize / 2 + 0.02;  // 1.22 — just above board
+    // Place starting dice near the centre-right of the felt, ready for the first roll
+    dice.push(createDie(new THREE.Vector3(2.8, dieRestY, 0.5)));
+    dice.push(createDie(new THREE.Vector3(1.3, dieRestY, -0.5)));
+
+    function syncDiceMeshes() {
+      for (const d of dice) {
+        d.mesh.position.copy(d.body.position);
+        if (d.snapAnim) {
+          d.snapAnim.frame++;
+          const t = Math.min(1, d.snapAnim.frame / d.snapAnim.totalFrames);
+          d.mesh.quaternion.slerpQuaternions(d.snapAnim.from, d.snapAnim.to, t);
+          if (t >= 1) d.snapAnim = null;
+        } else {
+          d.mesh.quaternion.copy(d.body.quaternion);
+        }
+      }
+    }
+
+    // Compute die value from orientation
+    const faceNormals = [
+      { normal: new CANNON.Vec3(1, 0, 0), value: 3 },
+      { normal: new CANNON.Vec3(-1, 0, 0), value: 4 },
+      { normal: new CANNON.Vec3(0, 1, 0), value: 1 },
+      { normal: new CANNON.Vec3(0, -1, 0), value: 6 },
+      { normal: new CANNON.Vec3(0, 0, 1), value: 2 },
+      { normal: new CANNON.Vec3(0, 0, -1), value: 5 },
+    ];
+    const worldUp = new CANNON.Vec3(0, 1, 0);
+    const temp = new CANNON.Vec3();
+
+    function getDieValue(die) {
+      let bestValue = 1;
+      let bestDot = -Infinity;
+      for (const face of faceNormals) {
+        die.body.quaternion.vmult(face.normal, temp);
+        const dot = temp.dot(worldUp);
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestValue = face.value;
+        }
+      }
+      return bestValue;
+    }
+
+    function isDieFlat(die) {
+      let bestDot = -Infinity;
+      for (const face of faceNormals) {
+        die.body.quaternion.vmult(face.normal, temp);
+        const dot = temp.dot(worldUp);
+        if (dot > bestDot) bestDot = dot;
+      }
+      return bestDot > 0.85; // face must be within ~32° of horizontal
+    }
+
+    // Rotate the die's quaternion so its nearest face points exactly straight up.
+    // Snaps the physics body immediately (for correct value reading) and starts a
+    // smooth mesh animation so the correction doesn't look like a jarring teleport.
+    function snapDieFlat(die) {
+      let bestNormal = new CANNON.Vec3();
+      let bestDot = -Infinity;
+      const tmpN = new CANNON.Vec3();
+      for (const face of faceNormals) {
+        die.body.quaternion.vmult(face.normal, tmpN);
+        const dot = tmpN.dot(worldUp);
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestNormal.set(tmpN.x, tmpN.y, tmpN.z);
+        }
+      }
+      if (bestDot > 0.999) return; // already flat
+
+      const axis = new CANNON.Vec3();
+      bestNormal.cross(worldUp, axis);
+      const axisLen = axis.length();
+      if (axisLen < 1e-6) return;
+
+      axis.scale(1 / axisLen, axis);
+      const angle = Math.acos(Math.max(-1, Math.min(1, bestDot)));
+      const correction = new CANNON.Quaternion();
+      correction.setFromAxisAngle(axis, angle);
+      const snapped = correction.mult(die.body.quaternion);
+
+      // Snap physics body immediately so value reading is correct
+      die.body.quaternion.set(snapped.x, snapped.y, snapped.z, snapped.w);
+      die.body.velocity.setZero();
+      die.body.angularVelocity.setZero();
+
+      // Animate the mesh from its current visual orientation to the snapped target
+      die.snapAnim = {
+        from: die.mesh.quaternion.clone(),
+        to: new THREE.Quaternion(snapped.x, snapped.y, snapped.z, snapped.w),
+        frame: 0,
+        totalFrames: 18,
+      };
+    }
+
+    // ----- Game logic -----
+    let canRoll = true;
+    let diceSettled = true;   // true = not waiting for a roll; set false by rollDice()
+    let settledFrames = 0;
+    let targetRollValue = null;
+    let validTileNumbers = new Set();
+    let gameOver = false;
+    let confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
+    let confettiPieces = [];
+    let confettiAnimId = null;
+
+    // ----- Audio -----
+    let audioCtx = null;
+    let lastDieDieSoundTime = -1;   // shared across both dice so they don't double-fire
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    // Schedule a single oscillator with optional frequency ramp and attack.
+    function scheduleOsc(ctx, { type = 'sine', freq, freqEnd = null, freqRampDur = 0, gain, decayDur, when, attack = 0 }) {
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, when);
+      if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, when + freqRampDur);
+      const g = ctx.createGain();
+      if (attack > 0) {
+        g.gain.setValueAtTime(0.0001, when);
+        g.gain.exponentialRampToValueAtTime(gain, when + attack);
+      } else {
+        g.gain.setValueAtTime(gain, when);
+      }
+      g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(when);
+      osc.stop(when + decayDur + 0.05);
+    }
+
+    // Schedule a filtered white-noise burst with optional filter-frequency sweep and attack.
+    function scheduleNoise(ctx, { filterType, filterFreq, filterFreqEnd = null, filterFreqRampDur = 0, Q = 1, duration, gain, decayDur, when, attack = 0 }) {
+      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+      const ch = buf.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = filterType;
+      filter.frequency.setValueAtTime(filterFreq, when);
+      if (filterFreqEnd !== null) filter.frequency.exponentialRampToValueAtTime(filterFreqEnd, when + filterFreqRampDur);
+      filter.Q.value = Q;
+      const g = ctx.createGain();
+      if (attack > 0) {
+        g.gain.setValueAtTime(0.0001, when);
+        g.gain.exponentialRampToValueAtTime(gain, when + attack);
+      } else {
+        g.gain.setValueAtTime(gain, when);
+      }
+      g.gain.exponentialRampToValueAtTime(0.0001, when + decayDur);
+      noise.connect(filter);
+      filter.connect(g);
+      g.connect(ctx.destination);
+      noise.start(when);
+      noise.stop(when + duration + 0.02);
+    }
+
+    function playWoodThump(ctx, when, gain) {
+      scheduleOsc(ctx, { freq: 260, freqEnd: 85, freqRampDur: 0.055, gain: gain * 0.65, decayDur: 0.075, when });
+      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 500, Q: 1.1, duration: 0.06, gain: gain * 0.38, decayDur: 0.042, when });
+    }
+
+    function playDiceClack(ctx, when, gain) {
+      scheduleOsc(ctx, { freq: 680, freqEnd: 210, freqRampDur: 0.038, gain: gain * 0.55, decayDur: 0.055, when });
+      scheduleNoise(ctx, { filterType: 'highpass', filterFreq: 600, duration: 0.04, gain: gain * 0.45, decayDur: 0.028, when });
+    }
+
+    function playDiceDieHit(ctx, when, gain) {
+      scheduleOsc(ctx, { freq: 920, freqEnd: 380, freqRampDur: 0.025, gain: gain * 0.65, decayDur: 0.13, when });
+      scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 1400, Q: 1.8, duration: 0.022, gain: gain * 0.40, decayDur: 0.016, when });
+    }
+
+    function playDiceRattle() {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        for (let i = 0; i < 5; i++) {
+          const t = now + i * 0.052 + Math.random() * 0.018;
+          const gain = 0.22 * Math.pow(0.72, i);
+          scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 700 + Math.random() * 500, Q: 2.2, duration: 0.038, gain, decayDur: 0.032, when: t });
+        }
+      } catch (_) { /* silent fallback */ }
+    }
+
+    // Two swept-noise layers: brief high whistle (throw impulse) + longer mid rush (flight).
+    function playDiceWhoosh() {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 2200, filterFreqEnd: 800, filterFreqRampDur: 0.30, Q: 2.0, duration: 0.30, gain: 0.07, decayDur: 0.30, when: now, attack: 0.03 });
+        scheduleNoise(ctx, { filterType: 'bandpass', filterFreq: 900, filterFreqEnd: 320, filterFreqRampDur: 0.65, Q: 1.3, duration: 0.65, gain: 0.09, decayDur: 0.65, when: now, attack: 0.06 });
+      } catch (_) { /* silent fallback */ }
+    }
+
+    // A4 → F4 → D4 → A3↓  sad-trombone figure on game over.
+    function playGameOverSound() {
+      try {
+        const ctx = getAudioCtx();
+        const start = ctx.currentTime + 0.35;
+        const notes = [
+          { freq: 440, delay: 0.00, dur: 0.38 },
+          { freq: 349, delay: 0.20, dur: 0.38 },
+          { freq: 294, delay: 0.40, dur: 0.38 },
+          { freq: 220, delay: 0.60, dur: 0.95 },
+        ];
+        notes.forEach(({ freq, delay, dur }, i) => {
+          const isLast = i === notes.length - 1;
+          scheduleOsc(ctx, { type: 'triangle', freq, freqEnd: freq * (isLast ? 0.70 : 0.96), freqRampDur: dur, gain: 0.17, decayDur: dur, when: start + delay, attack: 0.018 });
+        });
+      } catch (_) { /* silent fallback */ }
+    }
+
+    // Ascending bell arpeggio C5–E5–G5–C6 + sustained chord on win.
+    function playWinSound() {
+      try {
+        const ctx = getAudioCtx();
+        const start = ctx.currentTime + 0.44;
+        const arpFreqs = [523, 659, 784, 1047];
+        const spacing = 0.13;
+        const ringOut = 0.60;
+
+        arpFreqs.forEach((freq, i) => {
+          const t = start + i * spacing;
+          scheduleOsc(ctx, { freq, gain: 0.20, decayDur: ringOut, when: t, attack: 0.012 });
+          scheduleOsc(ctx, { freq: freq * 2.76, gain: 0.06, decayDur: ringOut * 0.40, when: t, attack: 0.012 });
+        });
+
+        const chordT = start + arpFreqs.length * spacing + 0.06;
+        const chordGains = [0.14, 0.10, 0.07, 0.05];
+        arpFreqs.forEach((freq, i) => {
+          scheduleOsc(ctx, { freq, gain: chordGains[i], decayDur: 1.5, when: chordT, attack: 0.025 });
+        });
+      } catch (_) { /* silent fallback */ }
+    }
+
+    function playTileFlipSound() {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        playWoodThump(ctx, now + 0.228, 0.28);   // main slam
+        playWoodThump(ctx, now + 0.390, 0.07);   // soft settle
+      } catch (_) { /* audio not supported — silent */ }
+    }
+
+    function resizeConfettiCanvas() {
+      if (!confettiCanvas || !confettiCtx) return;
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+
+    resizeConfettiCanvas();
+
+    function showGameOverOverlay({ perfect, score }) {
+      if (!gameOverOverlay) return;
+      if (perfect) {
+        gameOverTitleEl.textContent = 'Shut The Box!';
+        gameOverSubtitleEl.textContent = 'Beautifully done – every tile is closed.';
+        gameOverScoreEl.textContent = 'Score: 0';
+      } else {
+        gameOverTitleEl.textContent = 'No More Moves';
+        gameOverSubtitleEl.textContent = 'The box stays partially open this round.';
+        gameOverScoreEl.textContent = `Score: ${score}`;
+      }
+      gameOverOverlay.classList.add('visible');
+      if (perfect) {
+        startConfetti();
+        playWinSound();
+      } else {
+        playGameOverSound();
+      }
+    }
+
+    function hideGameOverOverlay() {
+      if (!gameOverOverlay) return;
+      gameOverOverlay.classList.remove('visible');
+      stopConfetti();
+    }
+
+    if (restartButton) {
+      restartButton.addEventListener('click', () => {
+        if (!gameOver) return;
+        startNewGame();
+      });
+    }
+
+    function createConfettiPiece() {
+      const colors = ['#ffd86f', '#f7b733', '#ff7e67', '#7cf29c', '#7ad0ff', '#e97bff'];
+      const size = 4 + Math.random() * 6;
+      return {
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * 40,
+        vx: -1 + Math.random() * 2,
+        vy: 2 + Math.random() * 3,
+        size,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (-0.1 + Math.random() * 0.2)
+      };
+    }
+
+    function startConfetti() {
+      if (!confettiCtx) return;
+      confettiPieces = [];
+      for (let i = 0; i < 160; i++) {
         confettiPieces.push(createConfettiPiece());
       }
 
-      for (let i = 0; i < confettiPieces.length; i++) {
-        const p = confettiPieces[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.02;
-        p.rotation += p.rotationSpeed;
+      function loop() {
+        confettiAnimId = requestAnimationFrame(loop);
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
 
-        if (p.y - p.size > window.innerHeight) {
-          confettiPieces[i] = createConfettiPiece();
-          continue;
+        if (Math.random() < 0.3 && confettiPieces.length < 240) {
+          confettiPieces.push(createConfettiPiece());
         }
 
-        confettiCtx.save();
-        confettiCtx.translate(p.x, p.y);
-        confettiCtx.rotate(p.rotation);
-        confettiCtx.fillStyle = p.color;
-        confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.6);
-        confettiCtx.restore();
-      }
-    }
+        for (let i = 0; i < confettiPieces.length; i++) {
+          const p = confettiPieces[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.02;
+          p.rotation += p.rotationSpeed;
 
-    if (!confettiAnimId) {
-      loop();
-    }
-  }
+          if (p.y - p.size > window.innerHeight) {
+            confettiPieces[i] = createConfettiPiece();
+            continue;
+          }
 
-  function stopConfetti() {
-    if (confettiAnimId) {
-      cancelAnimationFrame(confettiAnimId);
-      confettiAnimId = null;
-    }
-    if (confettiCtx && confettiCanvas) {
-      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-    }
-    confettiPieces = [];
-  }
-
-  function resetSelection() {
-    selectedValueEl.textContent = '0';
-    tiles.forEach(t => t.isSelected = false);
-  }
-
-  function setMessage(text) {
-    messageEl.innerHTML = text;
-  }
-
-  // Returns true when any subset of `nums` sums exactly to `target`.
-  function hasSubsetSum(nums, target) {
-    if (target === 0) return true;
-    if (target < 0 || nums.length === 0) return false;
-    return hasSubsetSum(nums.slice(1), target - nums[0]) ||
-           hasSubsetSum(nums.slice(1), target);
-  }
-
-  function computeAllValidTilesForRoll(roll) {
-    const openTiles = tiles.filter(t => t.state === 'open');
-    const numbers = openTiles.map(t => t.number);
-    const valid = new Set();
-
-    const n = numbers.length;
-    function backtrack(i, sum, used) {
-      if (sum === roll && used.length > 0) {
-        for (const num of used) valid.add(num);
-      }
-      if (i >= n || sum >= roll) return;
-      // include
-      backtrack(i + 1, sum + numbers[i], used.concat(numbers[i]));
-      // skip
-      backtrack(i + 1, sum, used);
-    }
-    backtrack(0, 0, []);
-
-    return valid;
-  }
-
-  function updateTileMaterials() {
-    const shouldHighlight = targetRollValue !== null && !gameOver;
-    tiles.forEach(tile => {
-      if (tile.state === 'closed') {
-        tile.mesh.material = tileMatClosed;
-        if (tile.highlightDot) tile.highlightDot.visible = false;
-        return;
-      }
-      // Base material with number texture
-      const mat = createTileMaterial(tile.number);
-
-      tile.mesh.material = mat;
-
-      // Show small green dot in top-right for valid/selected tiles after a roll
-      if (tile.highlightDot) {
-        tile.highlightDot.visible =
-          shouldHighlight && (tile.isSelected || validTileNumbers.has(tile.number));
-      }
-    });
-  }
-
-  function onRollComplete(total) {
-    targetRollValue = total;
-    rollValueEl.textContent = total.toString();
-    resetSelection();
-
-    const openTiles = tiles.filter(t => t.state === 'open');
-    if (openTiles.length === 0) {
-      setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
-      canRoll = true;
-      rollButton.disabled = false;
-      gameOver = true;
-      showGameOverOverlay({ perfect: true, score: 0 });
-      return;
-    }
-
-    validTileNumbers = computeAllValidTilesForRoll(total);
-    updateTileMaterials();
-
-    if (validTileNumbers.size === 0) {
-      const openSum = openTiles.reduce((s, t) => s + t.number, 0);
-      setMessage(`No moves. Your score is <strong>${openSum}</strong>. Click Roll to start a new game.`);
-      canRoll = true;
-      rollButton.disabled = false;
-      gameOver = true;
-      showGameOverOverlay({ perfect: false, score: openSum });
-    } else {
-      setMessage('Select any glowing tiles whose sum matches the roll.');
-    }
-  }
-
-  function startNewGame() {
-    tiles.forEach(tile => {
-      tile.state = 'open';
-      tile.isSelected = false;
-      tile.pivot.rotation.x = -Math.PI * 0.06;
-      tile.mesh.position.set(0, tileHeight / 2, 0);
-    });
-    targetRollValue = null;
-    gameOver = false;
-    validTileNumbers.clear();
-    resetSelection();
-    updateTileMaterials();
-    updateOpenSumDisplay();
-    hideGameOverOverlay();
-    rollValueEl.textContent = '–';
-    selectedValueEl.textContent = '0';
-    setMessage('Click <strong>Roll Dice</strong> to begin.');
-  }
-
-  // Animate and mark a single tile as closed (sound + physics-bounce easing).
-  // Game-state updates are handled by the caller.
-  function flipTileDown(tile) {
-    tile.state = 'closed';
-    tile.isSelected = false;
-    playTileFlipSound();
-    const startRotation = tile.pivot.rotation.x;
-    const endRotation   = -Math.PI / 2;
-    const duration = 0.38;
-    const startTime = performance.now();
-    const tImpact = 0.60, tPeak = 0.78, bounce = 0.13;
-    function step(now) {
-      const t = Math.min(1, (now - startTime) / (duration * 1000));
-      let ease;
-      if (t < tImpact) {
-        const s = t / tImpact;
-        ease = s * s * s;
-      } else if (t < tPeak) {
-        const s = (t - tImpact) / (tPeak - tImpact);
-        ease = 1 - bounce * s * s;
-      } else {
-        const s = (t - tPeak) / (1 - tPeak);
-        ease = (1 - bounce) + bounce * (1 - (1 - s) * (1 - s));
-      }
-      tile.pivot.rotation.x = startRotation + (endRotation - startRotation) * ease;
-      if (t < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-
-  // ----- Rolling -----
-  function rollDice() {
-    if (!canRoll) return;
-    canRoll = false;
-    diceSettled = false;
-    settledFrames = 0;
-    targetRollValue = null;
-    rollValueEl.textContent = '…';
-    setMessage('Rolling…');
-    playDiceRattle();
-    playDiceWhoosh();
-
-    // Physics reference:
-    //   ground body top  = boardThickness + 0.1  = 0.7
-    //   die resting (center) = 0.7 + 0.5          = 1.2
-    //   front physics border (inner face) ≈ z = 4.5   (board "near" side)
-    //   back  physics border (inner face) ≈ z = −5.2  (tiles side)
-    //   gravity = −20 units/s²
-    //
-    // Strategy: start dice just outside the front playing-field wall, elevated
-    // well above the border rail (~4 units).  They fly OVER the visible rim and
-    // arc down onto the felt — exactly like a real hand throw.
-
-    dice.forEach((d, idx) => {
-      d.snapAnim = null;
-      d.nudgeCount = 0;
-      d.body.velocity.setZero();
-      d.body.angularVelocity.setZero();
-
-      // ---- spawn position: player's "hand", front portion of the table ----------
-      // Physics front border (borderBottom) back face is at z ≈ 4.5.
-      // Start dice at z < 4.0 so they are safely inside the field — elevated high
-      // enough (y > border top ≈ 2.1) so they look like they're thrown from above.
-      const handX  = (idx === 0 ? -0.55 : 0.55) + (Math.random() - 0.5) * 2.2;
-      const handZ  = 3.0 + (Math.random() - 0.5) * 0.8 + idx * 0.3;
-      // Height: 3.5–5 units above board surface (die bottom well above border rail at 2.1)
-      const handY  = boardThickness + 3.5 + Math.random() * 1.5;
-
-      d.body.position.set(handX, handY, handZ);
-
-      // ---- random tumbling orientation ----------------------------------------
-      d.body.quaternion.setFromEuler(
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        'XYZ'
-      );
-
-      // ---- throw velocity ------------------------------------------------------
-      // Main component: −Z (toward the tiles at the back of the board)
-      // Vary speed 6–10 units/s; add slight random lateral angle and small upward arc
-      const throwSpeed = 6.0 + Math.random() * 4.0;
-      const sideAngle  = (Math.random() - 0.5) * 0.5;   // ±0.25 rad lateral spread
-
-      const vx = Math.sin(sideAngle) * throwSpeed + (Math.random() - 0.5) * 1.2;
-      const vy = 0.8 + Math.random() * 1.4;              // small upward arc
-      const vz = -(Math.cos(sideAngle) * throwSpeed);    // toward the tile rail
-
-      d.body.velocity.set(vx, vy, vz);
-
-      // ---- spin / angular velocity: high & random (real dice tumble a lot) ----
-      const spin = 12 + Math.random() * 14;              // 12–26 rad/s
-      d.body.angularVelocity.set(
-        (Math.random() - 0.5) * spin,
-        (Math.random() - 0.5) * spin,
-        (Math.random() - 0.5) * spin
-      );
-
-      d.body.wakeUp();
-    });
-
-    rollButton.disabled = true;
-  }
-
-  rollButton.addEventListener('click', () => {
-    // If game ended, a click restarts; otherwise continue current game
-    if (gameOver) {
-      startNewGame();
-    }
-    rollDice();
-  });
-
-  // ----- Mouse picking -----
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
-
-  function onPointerDown(event) {
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(tileRaycastMeshes);
-    if (intersects.length === 0) return;
-
-    const mesh = intersects[0].object;
-    const tile = tiles.find(t => t.mesh === mesh);
-    if (!tile) return;
-    if (tile.state !== 'open') return;
-    if (!validTileNumbers.has(tile.number)) return;
-    if (targetRollValue == null) return; // no roll yet
-    if (canRoll) return; // we only select while resolving current roll
-
-    const remaining = targetRollValue - tile.number;
-
-    // Guard: ensure remaining open tiles can still reach the remaining sum
-    if (remaining > 0) {
-      const stillOpen = tiles
-        .filter(t => t.state === 'open' && t !== tile)
-        .map(t => t.number);
-      if (!hasSubsetSum(stillOpen, remaining)) return;
-    }
-
-    // Immediately flip this tile
-    flipTileDown(tile);
-    updateOpenSumDisplay();
-
-    // Update "Selected" counter with total covered so far
-    const originalTotal = parseInt(rollValueEl.textContent) || 0;
-    selectedValueEl.textContent = (originalTotal - remaining).toString();
-
-    if (remaining === 0) {
-      // Round complete
-      targetRollValue = null;
-      validTileNumbers = new Set();
-      updateTileMaterials();
-
-      const allClosed = tiles.every(t => t.state === 'closed');
-      setTimeout(() => {
-        if (allClosed) {
-          setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
-          gameOver = true;
-          showGameOverOverlay({ perfect: true, score: 0 });
-        } else {
-          setMessage('Roll again!');
+          confettiCtx.save();
+          confettiCtx.translate(p.x, p.y);
+          confettiCtx.rotate(p.rotation);
+          confettiCtx.fillStyle = p.color;
+          confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.6);
+          confettiCtx.restore();
         }
+      }
+
+      if (!confettiAnimId) {
+        loop();
+      }
+    }
+
+    function stopConfetti() {
+      if (confettiAnimId) {
+        cancelAnimationFrame(confettiAnimId);
+        confettiAnimId = null;
+      }
+      if (confettiCtx && confettiCanvas) {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      }
+      confettiPieces = [];
+    }
+
+    function resetSelection() {
+      selectedValueEl.textContent = '0';
+      tiles.forEach(t => t.isSelected = false);
+    }
+
+    function setMessage(text) {
+      messageEl.innerHTML = text;
+    }
+
+    // Returns true when any subset of `nums` sums exactly to `target`.
+    function hasSubsetSum(nums, target) {
+      if (target === 0) return true;
+      if (target < 0 || nums.length === 0) return false;
+      return hasSubsetSum(nums.slice(1), target - nums[0]) ||
+        hasSubsetSum(nums.slice(1), target);
+    }
+
+    function computeAllValidTilesForRoll(roll) {
+      const openTiles = tiles.filter(t => t.state === 'open');
+      const numbers = openTiles.map(t => t.number);
+      const valid = new Set();
+
+      const n = numbers.length;
+      function backtrack(i, sum, used) {
+        if (sum === roll && used.length > 0) {
+          for (const num of used) valid.add(num);
+        }
+        if (i >= n || sum >= roll) return;
+        // include
+        backtrack(i + 1, sum + numbers[i], used.concat(numbers[i]));
+        // skip
+        backtrack(i + 1, sum, used);
+      }
+      backtrack(0, 0, []);
+
+      return valid;
+    }
+
+    function updateTileMaterials() {
+      const shouldHighlight = targetRollValue !== null && !gameOver;
+      tiles.forEach(tile => {
+        if (tile.state === 'closed') {
+          tile.mesh.material = tileMatClosed;
+          if (tile.highlightDot) tile.highlightDot.visible = false;
+          return;
+        }
+        // Base material with number texture
+        const mat = createTileMaterial(tile.number);
+
+        tile.mesh.material = mat;
+
+        // Show small green dot in top-right for valid/selected tiles after a roll
+        if (tile.highlightDot) {
+          tile.highlightDot.visible =
+            shouldHighlight && (tile.isSelected || validTileNumbers.has(tile.number));
+        }
+      });
+    }
+
+    function onRollComplete(total) {
+      targetRollValue = total;
+      rollValueEl.textContent = total.toString();
+      resetSelection();
+
+      const openTiles = tiles.filter(t => t.state === 'open');
+      if (openTiles.length === 0) {
+        setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
         canRoll = true;
         rollButton.disabled = false;
-      }, 500);
-    } else {
-      // More tiles needed — update remaining target and recompute valid tiles
-      targetRollValue = remaining;
-      validTileNumbers = computeAllValidTilesForRoll(remaining);
+        gameOver = true;
+        showGameOverOverlay({ perfect: true, score: 0 });
+        return;
+      }
+
+      validTileNumbers = computeAllValidTilesForRoll(total);
       updateTileMaterials();
-      setMessage(`Select tiles to make <strong>${remaining}</strong> more.`);
-    }
-  }
 
-  window.addEventListener('pointerdown', onPointerDown);
-
-  window.addEventListener('keydown', e => {
-    if (e.code === 'Space' && !rollButton.disabled) {
-      e.preventDefault();
-      rollButton.click();
-    }
-  });
-
-  // ----- Animation loop -----
-  let lastTime = performance.now();
-
-  function animate(now) {
-    requestAnimationFrame(animate);
-    const dt = Math.min((now - lastTime) / 1000, 1 / 30);
-    lastTime = now;
-
-    world.step(1 / 60, dt, 4);
-    syncDiceMeshes();
-
-    // Check dice settle (more sensitive for gentle throws)
-    if (!diceSettled) {
-      const v1 = dice[0].body.velocity.length();
-      const w1 = dice[0].body.angularVelocity.length();
-      const v2 = dice[1].body.velocity.length();
-      const w2 = dice[1].body.angularVelocity.length();
-      const threshold = 0.1;  // More sensitive threshold for gentle throws
-
-      if (v1 < threshold && w1 < threshold && v2 < threshold && w2 < threshold) {
-        settledFrames++;
-        if (settledFrames > 25) {
-          if (isDieFlat(dice[0]) && isDieFlat(dice[1])) {
-            diceSettled = true;
-            const val1 = getDieValue(dice[0]);
-            const val2 = getDieValue(dice[1]);
-            const total = val1 + val2;
-            onRollComplete(total);
-          } else if (settledFrames === 28) {
-            // Nudge dice that landed on an edge: apply a small angular impulse toward
-            // the nearest flat face so they tip over naturally rather than sitting frozen.
-            // (Limited to 2 nudges per roll; after that the snap fallback takes over.)
-            dice.forEach(d => {
-              if (!isDieFlat(d) && d.nudgeCount < 2) {
-                d.nudgeCount++;
-                const tmpN2 = new CANNON.Vec3();
-                let bDot = -Infinity, bNorm = new CANNON.Vec3();
-                for (const face of faceNormals) {
-                  d.body.quaternion.vmult(face.normal, tmpN2);
-                  const dot = tmpN2.dot(worldUp);
-                  if (dot > bDot) { bDot = dot; bNorm.set(tmpN2.x, tmpN2.y, tmpN2.z); }
-                }
-                const ax = new CANNON.Vec3();
-                bNorm.cross(worldUp, ax);
-                const al = ax.length();
-                if (al > 1e-6) {
-                  ax.scale(1 / al, ax);
-                  const nudge = 4.5;
-                  d.body.angularVelocity.set(ax.x * nudge, ax.y * nudge, ax.z * nudge);
-                }
-              }
-            });
-          } else if (settledFrames > 55) {
-            // Nudge didn't work — smooth-snap each stuck die to its nearest face-up orientation
-            dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
-            diceSettled = true;
-            onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
-          }
-        }
+      if (validTileNumbers.size === 0) {
+        const openSum = openTiles.reduce((s, t) => s + t.number, 0);
+        setMessage(`No moves. Your score is <strong>${openSum}</strong>. Click Roll to start a new game.`);
+        canRoll = true;
+        rollButton.disabled = false;
+        gameOver = true;
+        showGameOverOverlay({ perfect: false, score: openSum });
       } else {
-        settledFrames = 0;
+        setMessage('Select any glowing tiles whose sum matches the roll.');
       }
     }
 
-    controls.update();
-    renderer.render(scene, camera);
-  }
+    function startNewGame() {
+      tiles.forEach(tile => {
+        tile.state = 'open';
+        tile.isSelected = false;
+        tile.pivot.rotation.x = -Math.PI * 0.06;
+        tile.mesh.position.set(0, tileHeight / 2, 0);
+      });
+      targetRollValue = null;
+      gameOver = false;
+      validTileNumbers.clear();
+      resetSelection();
+      updateTileMaterials();
+      updateOpenSumDisplay();
+      hideGameOverOverlay();
+      rollValueEl.textContent = '–';
+      selectedValueEl.textContent = '0';
+      setMessage('Click <strong>Roll Dice</strong> to begin.');
+    }
 
-  animate(performance.now());
+    // Animate and mark a single tile as closed (sound + physics-bounce easing).
+    // Game-state updates are handled by the caller.
+    function flipTileDown(tile) {
+      tile.state = 'closed';
+      tile.isSelected = false;
+      playTileFlipSound();
+      const startRotation = tile.pivot.rotation.x;
+      const endRotation = -Math.PI / 2;
+      const duration = 0.38;
+      const startTime = performance.now();
+      const tImpact = 0.60, tPeak = 0.78, bounce = 0.13;
+      function step(now) {
+        const t = Math.min(1, (now - startTime) / (duration * 1000));
+        let ease;
+        if (t < tImpact) {
+          const s = t / tImpact;
+          ease = s * s * s;
+        } else if (t < tPeak) {
+          const s = (t - tImpact) / (tPeak - tImpact);
+          ease = 1 - bounce * s * s;
+        } else {
+          const s = (t - tPeak) / (1 - tPeak);
+          ease = (1 - bounce) + bounce * (1 - (1 - s) * (1 - s));
+        }
+        tile.pivot.rotation.x = startRotation + (endRotation - startRotation) * ease;
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
 
-  // ----- Resize -----
-  window.addEventListener('resize', () => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-    resizeConfettiCanvas();
-  });
+    // ----- Rolling -----
+    function rollDice() {
+      if (!canRoll) return;
+      canRoll = false;
+      diceSettled = false;
+      settledFrames = 0;
+      targetRollValue = null;
+      rollValueEl.textContent = '…';
+      setMessage('Rolling…');
+      playDiceRattle();
+      playDiceWhoosh();
 
-  // Initial message
-  setMessage('Click <strong>Roll Dice</strong>, then click glowing tiles to match the roll.');
-</script>
+      // Physics reference:
+      //   ground body top  = boardThickness + 0.1  = 0.7
+      //   die resting (center) = 0.7 + 0.5          = 1.2
+      //   front physics border (inner face) ≈ z = 4.5   (board "near" side)
+      //   back  physics border (inner face) ≈ z = −5.2  (tiles side)
+      //   gravity = −20 units/s²
+      //
+      // Strategy: start dice just outside the front playing-field wall, elevated
+      // well above the border rail (~4 units).  They fly OVER the visible rim and
+      // arc down onto the felt — exactly like a real hand throw.
+
+      dice.forEach((d, idx) => {
+        d.snapAnim = null;
+        d.nudgeCount = 0;
+        d.body.velocity.setZero();
+        d.body.angularVelocity.setZero();
+
+        // ---- spawn position: player's "hand", front portion of the table ----------
+        // Physics front border (borderBottom) back face is at z ≈ 4.5.
+        // Start dice at z < 4.0 so they are safely inside the field — elevated high
+        // enough (y > border top ≈ 2.1) so they look like they're thrown from above.
+        const handX = (idx === 0 ? -0.55 : 0.55) + (Math.random() - 0.5) * 2.2;
+        const handZ = 3.0 + (Math.random() - 0.5) * 0.8 + idx * 0.3;
+        // Height: 3.5–5 units above board surface (die bottom well above border rail at 2.1)
+        const handY = boardThickness + 3.5 + Math.random() * 1.5;
+
+        d.body.position.set(handX, handY, handZ);
+
+        // ---- random tumbling orientation ----------------------------------------
+        d.body.quaternion.setFromEuler(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          'XYZ'
+        );
+
+        // ---- throw velocity ------------------------------------------------------
+        // Main component: −Z (toward the tiles at the back of the board)
+        // Vary speed 6–10 units/s; add slight random lateral angle and small upward arc
+        const throwSpeed = 6.0 + Math.random() * 4.0;
+        const sideAngle = (Math.random() - 0.5) * 0.5;   // ±0.25 rad lateral spread
+
+        const vx = Math.sin(sideAngle) * throwSpeed + (Math.random() - 0.5) * 1.2;
+        const vy = 0.8 + Math.random() * 1.4;              // small upward arc
+        const vz = -(Math.cos(sideAngle) * throwSpeed);    // toward the tile rail
+
+        d.body.velocity.set(vx, vy, vz);
+
+        // ---- spin / angular velocity: high & random (real dice tumble a lot) ----
+        const spin = 12 + Math.random() * 14;              // 12–26 rad/s
+        d.body.angularVelocity.set(
+          (Math.random() - 0.5) * spin,
+          (Math.random() - 0.5) * spin,
+          (Math.random() - 0.5) * spin
+        );
+
+        d.body.wakeUp();
+      });
+
+      rollButton.disabled = true;
+    }
+
+    rollButton.addEventListener('click', () => {
+      // If game ended, a click restarts; otherwise continue current game
+      if (gameOver) {
+        startNewGame();
+      }
+      rollDice();
+    });
+
+    // ----- Mouse picking -----
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onPointerDown(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(tileRaycastMeshes);
+      if (intersects.length === 0) return;
+
+      const mesh = intersects[0].object;
+      const tile = tiles.find(t => t.mesh === mesh);
+      if (!tile) return;
+      if (tile.state !== 'open') return;
+      if (!validTileNumbers.has(tile.number)) return;
+      if (targetRollValue == null) return; // no roll yet
+      if (canRoll) return; // we only select while resolving current roll
+
+      const remaining = targetRollValue - tile.number;
+
+      // Guard: ensure remaining open tiles can still reach the remaining sum
+      if (remaining > 0) {
+        const stillOpen = tiles
+          .filter(t => t.state === 'open' && t !== tile)
+          .map(t => t.number);
+        if (!hasSubsetSum(stillOpen, remaining)) return;
+      }
+
+      // Immediately flip this tile
+      flipTileDown(tile);
+      updateOpenSumDisplay();
+
+      // Update "Selected" counter with total covered so far
+      const originalTotal = parseInt(rollValueEl.textContent) || 0;
+      selectedValueEl.textContent = (originalTotal - remaining).toString();
+
+      if (remaining === 0) {
+        // Round complete
+        targetRollValue = null;
+        validTileNumbers = new Set();
+        updateTileMaterials();
+
+        const allClosed = tiles.every(t => t.state === 'closed');
+        setTimeout(() => {
+          if (allClosed) {
+            setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
+            gameOver = true;
+            showGameOverOverlay({ perfect: true, score: 0 });
+          } else {
+            setMessage('Roll again!');
+          }
+          canRoll = true;
+          rollButton.disabled = false;
+        }, 500);
+      } else {
+        // More tiles needed — update remaining target and recompute valid tiles
+        targetRollValue = remaining;
+        validTileNumbers = computeAllValidTilesForRoll(remaining);
+        updateTileMaterials();
+        setMessage(`Select tiles to make <strong>${remaining}</strong> more.`);
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown);
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' && !rollButton.disabled) {
+        e.preventDefault();
+        rollButton.click();
+      }
+    });
+
+    // ----- Animation loop -----
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+      lastTime = now;
+
+      world.step(1 / 60, dt, 4);
+      syncDiceMeshes();
+
+      // Check dice settle (more sensitive for gentle throws)
+      if (!diceSettled) {
+        const v1 = dice[0].body.velocity.length();
+        const w1 = dice[0].body.angularVelocity.length();
+        const v2 = dice[1].body.velocity.length();
+        const w2 = dice[1].body.angularVelocity.length();
+        const threshold = 0.1;  // More sensitive threshold for gentle throws
+
+        if (v1 < threshold && w1 < threshold && v2 < threshold && w2 < threshold) {
+          settledFrames++;
+          if (settledFrames > 25) {
+            if (isDieFlat(dice[0]) && isDieFlat(dice[1])) {
+              diceSettled = true;
+              const val1 = getDieValue(dice[0]);
+              const val2 = getDieValue(dice[1]);
+              const total = val1 + val2;
+              onRollComplete(total);
+            } else if (settledFrames === 28) {
+              // Nudge dice that landed on an edge: apply a small angular impulse toward
+              // the nearest flat face so they tip over naturally rather than sitting frozen.
+              // (Limited to 2 nudges per roll; after that the snap fallback takes over.)
+              const nudgeUsed = dice.some(d => !isDieFlat(d) && d.nudgeCount < 2);
+              dice.forEach(d => {
+                if (!isDieFlat(d) && d.nudgeCount < 2) {
+                  d.nudgeCount++;
+                  const tmpN2 = new CANNON.Vec3();
+                  let bDot = -Infinity, bNorm = new CANNON.Vec3();
+                  for (const face of faceNormals) {
+                    d.body.quaternion.vmult(face.normal, tmpN2);
+                    const dot = tmpN2.dot(worldUp);
+                    if (dot > bDot) { bDot = dot; bNorm.set(tmpN2.x, tmpN2.y, tmpN2.z); }
+                  }
+                  const ax = new CANNON.Vec3();
+                  bNorm.cross(worldUp, ax);
+                  const al = ax.length();
+                  if (al > 1e-6) {
+                    ax.scale(1 / al, ax);
+                    const nudge = 4.5;
+                    d.body.angularVelocity.set(ax.x * nudge, ax.y * nudge, ax.z * nudge);
+                  }
+                }
+              });
+              // If nudge budget is already exhausted for all stuck dice, snap them immediately.
+              // (The nudge itself resets settledFrames to 0, making the old >55 fallback
+              //  unreachable when a die keeps oscillating after both nudges.)
+              if (!nudgeUsed) {
+                dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
+                diceSettled = true;
+                onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
+              }
+            } else if (settledFrames > 55) {
+              // Safety net: snap any still-stuck die and conclude the roll.
+              dice.forEach(d => { if (!isDieFlat(d)) snapDieFlat(d); });
+              diceSettled = true;
+              onRollComplete(getDieValue(dice[0]) + getDieValue(dice[1]));
+            }
+          }
+        } else {
+          settledFrames = 0;
+        }
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate(performance.now());
+
+    // ----- Resize -----
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      resizeConfettiCanvas();
+    });
+
+    // Initial message
+    setMessage('Click <strong>Roll Dice</strong>, then click glowing tiles to match the roll.');
+  </script>
 </body>
+
 </html>
