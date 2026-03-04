@@ -729,9 +729,17 @@
     const tileHighlightDotGeo = new THREE.SphereGeometry(0.09, 12, 12);
     const tileHighlightDotMat = new THREE.MeshBasicMaterial({ color: 0x2bff7a });
 
+    const plainWoodMat = new THREE.MeshStandardMaterial({
+      color: tileWoodColor,
+      roughness: 0.5,
+      metalness: 0.1,
+      emissive: new THREE.Color(0x000000),
+      emissiveIntensity: 0.0
+    });
+
     function createTileMaterial(num) {
       if (!tileCanvasMatCache[num]) {
-        tileCanvasMatCache[num] = new THREE.MeshStandardMaterial({
+        const frontMat = new THREE.MeshStandardMaterial({
           color: tileWoodColor,
           roughness: 0.5,
           metalness: 0.1,
@@ -739,8 +747,19 @@
           emissive: new THREE.Color(0x000000),
           emissiveIntensity: 0.0
         });
+
+        // RoundedBoxGeometry has 6 groups: +X, -X, +Y, -Y, +Z (front), -Z (back)
+        tileCanvasMatCache[num] = [
+          plainWoodMat, // 0: Right
+          plainWoodMat, // 1: Left
+          plainWoodMat, // 2: Top
+          plainWoodMat, // 3: Bottom
+          frontMat,     // 4: Front
+          plainWoodMat  // 5: Back
+        ];
       }
-      return tileCanvasMatCache[num].clone();
+      // clone each material in the array so each tile can have independent highlights if needed
+      return tileCanvasMatCache[num].map(m => m.clone());
     }
 
     const tileRaycastMeshes = [];
@@ -1370,15 +1389,22 @@
     function updateTileMaterials() {
       const shouldHighlight = targetRollValue !== null && !gameOver;
       tiles.forEach(tile => {
+        // Base material with number texture
+        const matArray = createTileMaterial(tile.number);
+
         if (tile.state === 'closed') {
-          tile.mesh.material = tileMatClosed;
+          // Keep the texture but switch colors to the closed state
+          matArray.forEach(m => {
+            m.color.copy(tileMatClosed.color);
+            m.emissive.copy(tileMatClosed.emissive);
+            m.emissiveIntensity = tileMatClosed.emissiveIntensity;
+          });
+          tile.mesh.material = matArray;
           if (tile.highlightDot) tile.highlightDot.visible = false;
           return;
         }
-        // Base material with number texture
-        const mat = createTileMaterial(tile.number);
 
-        tile.mesh.material = mat;
+        tile.mesh.material = matArray;
 
         // Show small green dot in top-right for valid/selected tiles after a roll
         if (tile.highlightDot) {
