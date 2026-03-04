@@ -202,14 +202,14 @@
       }
     }
 
-    /* Animate only when the button is actionable */
-    #rollButton:not(:disabled) {
+    /* Animate only when the button is actionable and the game is not over */
+    #rollButton:not(:disabled):not(.game-over) {
       animation: rollButtonReady 2.8s ease-in-out infinite;
     }
 
     /* Freeze the animation while the pointer is over it or pressing it */
-    #rollButton:hover:not(:disabled),
-    #rollButton:active:not(:disabled) {
+    #rollButton:hover:not(:disabled):not(.game-over),
+    #rollButton:active:not(:disabled):not(.game-over) {
       animation: none;
     }
 
@@ -1398,6 +1398,7 @@
         setMessage('<strong>You shut the box!</strong> Click Roll to start again.');
         canRoll = true;
         rollButton.disabled = false;
+        rollButton.classList.add('game-over');
         gameOver = true;
         showGameOverOverlay({ perfect: true, score: 0 });
         return;
@@ -1411,6 +1412,7 @@
         setMessage(`No moves. Your score is <strong>${openSum}</strong>. Click Roll to start a new game.`);
         canRoll = true;
         rollButton.disabled = false;
+        rollButton.classList.add('game-over');
         gameOver = true;
         showGameOverOverlay({ perfect: false, score: openSum });
       } else {
@@ -1432,6 +1434,7 @@
       updateTileMaterials();
       updateOpenSumDisplay();
       hideGameOverOverlay();
+      rollButton.classList.remove('game-over');
       rollValueEl.textContent = '–';
       selectedValueEl.textContent = '0';
       setMessage('Click <strong>Roll Dice</strong> to begin.');
